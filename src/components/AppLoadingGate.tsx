@@ -11,12 +11,8 @@ import { useState } from "react";
  * - loading: 显示加载动画
  * - needToken: 显示输入令牌提示条
  * - error: 显示错误信息（但允许继续使用，数据会降级到默认值）
- *
- * 注意：useAppData() 本身的返回值变化已经能触发本组件重渲染，
- * 不需要额外的 data 引用。
  */
 export function AppLoadingGate({ children }: { children: React.ReactNode }) {
-  // 只解构需要的状态字段，它们的更新会自动触发本组件重渲染
   const { loading, needToken, error } = useAppData();
   const [tokenOpen, setTokenOpen] = useState(false);
 
@@ -32,7 +28,6 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
     );
   }
 
-  // 需要令牌时仍渲染主界面，但显示顶部提示条
   return (
     <>
       {(needToken || error) && (
@@ -40,7 +35,7 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
           {needToken ? (
             <>
               <KeyRound className="w-3.5 h-3.5 shrink-0" />
-              <span>未设置访问令牌或令牌无效，数据可能无法同步到云端</span>
+              <span>请设置访问令牌以启用数据同步</span>
               <Button
                 size="sm"
                 variant="outline"
@@ -54,7 +49,7 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
             <>
               <CloudOff className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">
-                云端同步失败：{error?.message}（已显示本地缓存数据）
+                {error?.message || "网络同步异常"}，请检查网络后重试
               </span>
               <Button
                 size="sm"

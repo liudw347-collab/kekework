@@ -111,7 +111,7 @@ export function ToolboxModule({ onBack }: ToolboxModuleProps) {
             <div className="leading-relaxed">
               <p className="font-medium mb-1">关于返回工作台</p>
               <p className="text-xs">
-                这些外部工具部署在独立的 Cloudflare Pages 上。如需在工具页面集成「返回工作台」按钮，可在对应项目代码中加入指向本站的链接。
+                这些工具在独立页面运行。如需在工具页面添加「返回工作台」按钮，可在对应项目中加入指向本站的链接。
               </p>
             </div>
           </div>

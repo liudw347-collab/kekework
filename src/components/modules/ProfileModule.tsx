@@ -32,12 +32,24 @@ import { downloadFile, todayISO } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { TokenDialog } from "@/components/TokenDialog";
 
+type ModuleView =
+  | "countdown"
+  | "quiz"
+  | "period"
+  | "toolbox"
+  | "todo"
+  | "water"
+  | "quote"
+  | "calendar"
+  | "nav";
+
 interface ProfileModuleProps {
   onBack: () => void;
+  onOpenModule?: (m: ModuleView) => void;
 }
 
-export function ProfileModule({ onBack }: ProfileModuleProps) {
-  const { data, exportAll, importAll, clearAll, reload } = useAppData();
+export function ProfileModule({ onBack, onOpenModule }: ProfileModuleProps) {
+  const { data, exportAll, importAll, clearAll, reload, needToken, error } = useAppData();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [importText, setImportText] = useState("");
@@ -128,11 +140,26 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
           </div>
           <h2 className="text-lg font-semibold">可可老师</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            河北教师编备考中 · 加油上岸！
+            {data.examCountdown.examName}备考中 · 加油上岸！
           </p>
-          <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px] text-emerald-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>云端同步已启用</span>
+          {/* 同步状态指示 */}
+          <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px]">
+            {needToken ? (
+              <span className="text-amber-600 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                待设置访问令牌
+              </span>
+            ) : error ? (
+              <span className="text-destructive flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-destructive" />
+                同步异常
+              </span>
+            ) : (
+              <span className="text-emerald-600 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                云端同步已启用
+              </span>
+            )}
           </div>
         </section>
 
@@ -242,25 +269,26 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
         {/* 功能模块列表（快捷进入） */}
         <section className="rounded-2xl p-4 bg-card border border-border/50">
           <h3 className="font-semibold text-sm mb-3">全部功能</h3>
-          <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="grid grid-cols-3 gap-2 text-sm">
             {[
-              { name: "备考倒计时", emoji: "📚" },
-              { name: "刷题练习", emoji: "📝" },
-              { name: "经期记录", emoji: "🌸" },
-              { name: "我的工具箱", emoji: "🔧" },
-              { name: "待办清单", emoji: "✅" },
-              { name: "喝水提醒", emoji: "💧" },
-              { name: "每日一言", emoji: "✨" },
-              { name: "快捷日历", emoji: "📅" },
-              { name: "快捷导航", emoji: "📖" },
+              { name: "备考倒计时", emoji: "📚", key: "countdown" as const },
+              { name: "刷题练习", emoji: "📝", key: "quiz" as const },
+              { name: "经期记录", emoji: "🌸", key: "period" as const },
+              { name: "我的工具箱", emoji: "🔧", key: "toolbox" as const },
+              { name: "待办清单", emoji: "✅", key: "todo" as const },
+              { name: "喝水提醒", emoji: "💧", key: "water" as const },
+              { name: "每日一言", emoji: "✨", key: "quote" as const },
+              { name: "快捷日历", emoji: "📅", key: "calendar" as const },
+              { name: "快捷导航", emoji: "📖", key: "nav" as const },
             ].map((m) => (
-              <div
-                key={m.name}
-                className="flex items-center gap-2 p-2 rounded-lg bg-muted/30"
+              <button
+                key={m.key}
+                onClick={() => onOpenModule?.(m.key)}
+                className="flex flex-col items-center gap-1 p-3 rounded-lg bg-muted/30 hover:bg-muted/60 active:scale-95 transition-all"
               >
-                <span className="text-base">{m.emoji}</span>
+                <span className="text-xl">{m.emoji}</span>
                 <span className="text-xs">{m.name}</span>
-              </div>
+              </button>
             ))}
           </div>
         </section>
@@ -272,10 +300,10 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
             <div className="text-xs text-secondary-foreground leading-relaxed space-y-1">
               <p className="font-medium text-sm mb-1">关于可可的工作台</p>
               <p>· 个人工具网站，专为教师编备考设计</p>
-              <p>· 数据通过 Cloudflare D1 数据库云端同步</p>
+              <p>· 数据云端同步，多设备查看一致</p>
               <p>· 不同手机登录相同访问令牌即可看到相同数据</p>
               <p>· 建议定期导出数据做备份</p>
-              <p>· 部署在 Cloudflare Pages，全球加速</p>
+              <p>· 全球 CDN 加速，访问快速稳定</p>
               <p className="pt-2 flex items-center gap-1">
                 <Heart className="w-3 h-3 text-primary" fill="currentColor" />
                 Made with love for 可可老师

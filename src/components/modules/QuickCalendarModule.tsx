@@ -74,12 +74,14 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
       return marks;
     }
 
+    // 本地时区日期格式化（避免 UTC 偏差）
+    const formatLocalDate = (y: number, m: number, d: number) =>
+      `${y}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
     // 上月填充
     for (let i = startWeekday - 1; i >= 0; i--) {
       const d = prevLastDay - i;
-      const dateStr = new Date(viewYear, viewMonth - 1, d)
-        .toISOString()
-        .slice(0, 10);
+      const dateStr = formatLocalDate(viewYear, viewMonth, d);
       result.push({
         date: dateStr,
         isCurrentMonth: false,
@@ -90,9 +92,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
 
     // 本月
     for (let d = 1; d <= totalDays; d++) {
-      const dateStr = new Date(viewYear, viewMonth, d)
-        .toISOString()
-        .slice(0, 10);
+      const dateStr = formatLocalDate(viewYear, viewMonth + 1, d);
       result.push({
         date: dateStr,
         isCurrentMonth: true,
@@ -104,9 +104,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
     // 下月填充
     const remaining = 42 - result.length;
     for (let d = 1; d <= remaining; d++) {
-      const dateStr = new Date(viewYear, viewMonth + 1, d)
-        .toISOString()
-        .slice(0, 10);
+      const dateStr = formatLocalDate(viewYear, viewMonth + 2, d);
       result.push({
         date: dateStr,
         isCurrentMonth: false,

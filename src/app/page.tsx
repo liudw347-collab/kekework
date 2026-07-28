@@ -100,11 +100,12 @@ export default function Home() {
         case "nav":
           return <QuickNavModule onBack={goBack} />;
         case "profile":
-          return <ProfileModule onBack={goBack} />;
+          return <ProfileModule onBack={goBack} onOpenModule={openModule} />;
       }
     }
     if (tab === "home") return <HomeDashboard onOpenModule={openModule} />;
-    if (tab === "profile") return <ProfileModule onBack={goBack} />;
+    if (tab === "profile")
+      return <ProfileModule onBack={goBack} onOpenModule={openModule} />;
     return null;
   };
 

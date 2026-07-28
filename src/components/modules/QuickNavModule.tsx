@@ -226,23 +226,29 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
                       <div className="text-xs font-medium line-clamp-1 w-full">
                         {bm.title}
                       </div>
-                      <ExternalLink className="w-3 h-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity mt-1" />
+                      <ExternalLink className="w-3 h-3 text-muted-foreground mt-1" />
                     </button>
-                    {/* 操作按钮 */}
-                    <div className="absolute top-1 right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                    {/* 操作按钮 - 移动端始终显示，桌面端 hover 显示 */}
+                    <div className="absolute top-1 right-1 flex gap-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                       <button
-                        onClick={() => handleEdit(bm)}
-                        className="p-1 rounded bg-background/80 backdrop-blur hover:bg-muted"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEdit(bm);
+                        }}
+                        className="p-2 rounded-lg bg-background/90 backdrop-blur hover:bg-muted shadow-sm min-w-[36px] min-h-[36px] flex items-center justify-center"
                         aria-label="编辑"
                       >
-                        <Pencil className="w-3 h-3" />
+                        <Pencil className="w-3.5 h-3.5" />
                       </button>
                       <button
-                        onClick={() => handleDelete(bm.id)}
-                        className="p-1 rounded bg-background/80 backdrop-blur hover:bg-destructive/10 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(bm.id);
+                        }}
+                        className="p-2 rounded-lg bg-background/90 backdrop-blur hover:bg-destructive/10 text-destructive shadow-sm min-w-[36px] min-h-[36px] flex items-center justify-center"
                         aria-label="删除"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>

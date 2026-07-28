@@ -15,9 +15,10 @@ export function uid(prefix = ""): string {
     .slice(2, 8)}`;
 }
 
-/** 获取今日日期 YYYY-MM-DD */
+/** 获取今日日期 YYYY-MM-DD（使用本地时区，避免 UTC 偏差） */
 export function todayISO(): string {
-  return new Date().toISOString().slice(0, 10);
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** 计算两个日期相差天数（不含时间） */
@@ -27,11 +28,11 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((b.getTime() - a.getTime()) / (1000 * 60 * 60 * 24));
 }
 
-/** 添加天数到日期 */
+/** 添加天数到日期（使用本地时区） */
 export function addDays(date: string, days: number): string {
   const d = new Date(date + "T00:00:00");
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
 /** 根据时间获取问候语 */

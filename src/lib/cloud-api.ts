@@ -64,13 +64,14 @@ async function fetchWithTimeout(
   }
 }
 
-/** 统一处理响应状态码 */
+/** 统一处理响应状态码，返回用户友好的错误消息 */
 function handleResponse(res: Response, action: string): void {
   if (res.status === 401) {
     throw new Error("UNAUTHORIZED");
   }
   if (!res.ok) {
-    throw new Error(`${action}失败：HTTP ${res.status}`);
+    // 对外只显示友好消息，不暴露 HTTP 状态码
+    throw new Error(`${action}失败，请稍后重试`);
   }
 }
 
@@ -91,9 +92,9 @@ export async function fetchAllFromCloud(): Promise<Partial<AppAllData>> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "TIMEOUT") {
-      throw new Error("云端加载超时，请检查网络");
+      throw new Error("加载超时，请检查网络");
     }
-    throw new Error(`网络错误：${msg}`);
+    throw new Error("网络连接异常，请检查网络");
   }
 
   if (res.status === 401) {
@@ -105,7 +106,7 @@ export async function fetchAllFromCloud(): Promise<Partial<AppAllData>> {
     return {};
   }
   if (!res.ok) {
-    throw new Error(`云端加载失败：HTTP ${res.status}`);
+    throw new Error("数据加载失败，请稍后重试");
   }
 
   return (await res.json()) as Partial<AppAllData>;
@@ -133,9 +134,9 @@ export async function saveToCloud<K extends keyof AppAllData>(
     if (msg === "TIMEOUT") {
       throw new Error("保存超时，请检查网络");
     }
-    throw new Error(`网络错误：${msg}`);
+    throw new Error("网络连接异常，请检查网络");
   }
-  handleResponse(res, "云端保存");
+  handleResponse(res, "保存");
 }
 
 /**
@@ -157,11 +158,11 @@ export async function saveAllToCloud(data: Partial<AppAllData>): Promise<void> {
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "TIMEOUT") {
-      throw new Error("批量保存超时，请检查网络");
+      throw new Error("保存超时，请检查网络");
     }
-    throw new Error(`网络错误：${msg}`);
+    throw new Error("网络连接异常，请检查网络");
   }
-  handleResponse(res, "云端批量保存");
+  handleResponse(res, "保存");
 }
 
 /**
@@ -184,13 +185,13 @@ export async function deleteFromCloud<K extends keyof AppAllData>(
     if (msg === "TIMEOUT") {
       throw new Error("删除超时，请检查网络");
     }
-    throw new Error(`网络错误：${msg}`);
+    throw new Error("网络连接异常，请检查网络");
   }
   if (res.status === 401) {
     throw new Error("UNAUTHORIZED");
   }
   if (!res.ok && res.status !== 404) {
-    throw new Error(`云端删除失败：HTTP ${res.status}`);
+    throw new Error("删除失败，请稍后重试");
   }
 }
 
@@ -220,7 +221,7 @@ export async function clearAllFromCloud(): Promise<void> {
       await clearAllFromCloudFallback();
       return;
     }
-    throw new Error(`云端清空失败：HTTP ${res.status}`);
+    throw new Error("清空失败，请稍后重试");
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (msg === "UNAUTHORIZED") {
@@ -238,7 +239,7 @@ export async function clearAllFromCloud(): Promise<void> {
 async function clearAllFromCloudFallback(): Promise<void> {
   const allData = await fetchAllFromCloud();
   const keys = Object.keys(allData) as (keyof AppAllData)[];
-  // 串行删除，避免触发 D1 速率限制
+  // 串行删除，避免触发速率限制
   for (const k of keys) {
     await deleteFromCloud(k);
   }

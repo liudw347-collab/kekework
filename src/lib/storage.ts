@@ -16,7 +16,11 @@ import type {
 } from "./types";
 
 // ============ 默认值 ============
-const todayISO = () => new Date().toISOString().slice(0, 10);
+/** 本地时区今日日期 */
+const todayISO = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 
 export const DEFAULT_EXAM_COUNTDOWN: ExamCountdownState = {
   examName: "河北教师编考试",

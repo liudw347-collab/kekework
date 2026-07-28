@@ -104,7 +104,7 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       icon: CalendarClock,
       color: "bg-primary/15",
       onClick: () => onOpenModule("countdown"),
-      badge: `${summary.countdown} 天`,
+      badge: summary.countdown > 0 ? `${summary.countdown} 天` : "已到",
     },
     {
       key: "quiz",
@@ -122,7 +122,9 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: summary.periodNext
         ? summary.inPeriod
           ? "经期中"
-          : `预计 ${formatChineseDate(summary.periodNext)}（${summary.periodInDays}天后）`
+          : summary.periodInDays > 0
+            ? `预计 ${formatChineseDate(summary.periodNext)}（${summary.periodInDays}天后）`
+            : "已过期，请记录"
         : "点击记录",
       icon: Flower2,
       color: "bg-pink-100/70",
