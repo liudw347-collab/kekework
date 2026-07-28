@@ -34,16 +34,22 @@ interface TokenDialogProps {
 export function TokenDialog({ open, onOpenChange }: TokenDialogProps) {
   const [token, setToken] = useState("");
   const [saving, setSaving] = useState(false);
-  const { reload, error } = useAppData();
+  const [localError, setLocalError] = useState<string | null>(null);
+  const { reload } = useAppData();
 
   const handleSave = async () => {
     setSaving(true);
+    setLocalError(null);
     setAccessToken(token);
-    // 立即重新加载验证令牌
-    await reload();
-    setSaving(false);
-    if (!error) {
+    try {
+      // reload 成功意味着令牌有效；失败会抛错
+      await reload();
       onOpenChange(false);
+    } catch {
+      // reload 内部已经设置了 error 状态，这里只需提示用户
+      setLocalError("令牌验证失败，请检查后重试");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -78,10 +84,10 @@ export function TokenDialog({ open, onOpenChange }: TokenDialogProps) {
               onKeyDown={(e) => e.key === "Enter" && handleSave()}
             />
           </div>
-          {error && (
+          {localError && (
             <div className="flex items-start gap-2 p-2 rounded-md bg-destructive/10 text-destructive text-xs">
               <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-              <span>{error.message}</span>
+              <span>{localError}</span>
             </div>
           )}
           <div className="rounded-md bg-amber-50 border border-amber-200 p-2 text-xs text-amber-800">

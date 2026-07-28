@@ -9,11 +9,15 @@ import { useState } from "react";
 /**
  * 全局加载/错误状态
  * - loading: 显示加载动画
- * - needToken: 显示输入令牌提示
+ * - needToken: 显示输入令牌提示条
  * - error: 显示错误信息（但允许继续使用，数据会降级到默认值）
+ *
+ * 注意：useAppData() 本身的返回值变化已经能触发本组件重渲染，
+ * 不需要额外的 data 引用。
  */
 export function AppLoadingGate({ children }: { children: React.ReactNode }) {
-  const { loading, needToken, error, data } = useAppData();
+  // 只解构需要的状态字段，它们的更新会自动触发本组件重渲染
+  const { loading, needToken, error } = useAppData();
   const [tokenOpen, setTokenOpen] = useState(false);
 
   if (loading) {
@@ -66,8 +70,6 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
       )}
       {children}
       <TokenDialog open={tokenOpen} onOpenChange={setTokenOpen} />
-      {/* 隐藏引用以避免 unused 警告，data 用于触发重渲染 */}
-      <span className="hidden" data-app-loaded={Object.keys(data).length > 0} />
     </>
   );
 }

@@ -52,7 +52,7 @@ interface QuizModuleProps {
   onBack: () => void;
 }
 
-/** 示例题库 - 用户首次导入参考 */
+/** 示例题库 - 用户首次导入参考（也用于下载模板） */
 const SAMPLE_QUESTIONS: Question[] = [
   {
     id: "q-sample-1",
@@ -135,16 +135,6 @@ export function QuizModule({ onBack }: QuizModuleProps) {
   const [jsonInput, setJsonInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-
-  // 首次使用：加载示例题库
-  const loadedRef = useRef(false);
-  if (!loadedRef.current && questions.length === 0) {
-    loadedRef.current = true;
-    // 异步加载示例题库（不影响首次渲染）
-    setTimeout(() => {
-      void update("quizQuestions", SAMPLE_QUESTIONS);
-    }, 0);
-  }
 
   // 知识点分类列表
   const categories = useMemo(() => {

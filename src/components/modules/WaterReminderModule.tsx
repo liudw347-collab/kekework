@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,30 +27,28 @@ interface WaterReminderModuleProps {
 
 export function WaterReminderModule({ onBack }: WaterReminderModuleProps) {
   const { data, update } = useAppData();
-
-  // 跨天重置
-  const state = useMemo<WaterState>(() => {
-    const today = todayISO();
-    if (data.waterState.todayDate !== today) {
-      const next: WaterState = {
-        ...data.waterState,
-        todayDate: today,
-        todayCount: 0,
-        history: {
-          ...data.waterState.history,
-          [data.waterState.todayDate]: data.waterState.todayCount,
-        },
-      };
-      // 异步更新到云端
-      void update("waterState", next);
-      return next;
-    }
-    return data.waterState;
-  }, [data.waterState, update]);
+  const state = data.waterState;
 
   const [settingOpen, setSettingOpen] = useState(false);
   const [goalInput, setGoalInput] = useState(state.dailyGoal);
   const { toast } = useToast();
+
+  // 跨天重置：在 useEffect 中处理，避免渲染期间触发副作用
+  useEffect(() => {
+    const today = todayISO();
+    if (state.todayDate !== today) {
+      const next: WaterState = {
+        ...state,
+        todayDate: today,
+        todayCount: 0,
+        history: {
+          ...state.history,
+          [state.todayDate]: state.todayCount,
+        },
+      };
+      void update("waterState", next);
+    }
+  }, [state, update]);
 
   const handleAdd = async () => {
     const next: WaterState = {

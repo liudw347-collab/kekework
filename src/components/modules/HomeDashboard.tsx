@@ -228,11 +228,13 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
           date: data.lastQuoteDate,
           index: data.lastQuoteIndex,
         }}
-        onUpdate={(s) =>
-          update("lastQuoteDate", s.date).then(() =>
+        onUpdate={(s) => {
+          // 并行更新两个字段（比串行 .then 更快）
+          void Promise.all([
+            update("lastQuoteDate", s.date),
             update("lastQuoteIndex", s.index),
-          )
-        }
+          ]);
+        }}
       />
 
       {/* 功能宫格 */}

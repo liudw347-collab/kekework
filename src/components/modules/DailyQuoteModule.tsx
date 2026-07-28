@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,25 +14,33 @@ interface DailyQuoteModuleProps {
   onBack: () => void;
 }
 
+/** 根据日期生成稳定的语录索引 */
+function computeQuoteIndex(date: string): number {
+  const seed = date
+    .split("-")
+    .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
+  return seed % QUOTES.length;
+}
+
 export function DailyQuoteModule({ onBack }: DailyQuoteModuleProps) {
   const { data, update } = useAppData();
   const today = todayISO();
+  const isToday = data.lastQuoteDate === today;
+  const initialIndex = isToday
+    ? data.lastQuoteIndex % QUOTES.length
+    : computeQuoteIndex(today);
 
-  // 计算当前 index（与首页保持一致）
-  const [index, setIndex] = useState(() => {
-    if (data.lastQuoteDate === today) {
-      return data.lastQuoteIndex % QUOTES.length;
-    }
-    const seed = today
-      .split("-")
-      .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
-    const idx = seed % QUOTES.length;
-    void update("lastQuoteDate", today);
-    void update("lastQuoteIndex", idx);
-    return idx;
-  });
+  const [index, setIndex] = useState(initialIndex);
   const [category, setCategory] = useState<string>("全部");
   const { toast } = useToast();
+
+  // 日期变化时，异步同步新索引到云端
+  useEffect(() => {
+    if (!isToday) {
+      void update("lastQuoteDate", today);
+      void update("lastQuoteIndex", initialIndex);
+    }
+  }, [isToday, today, initialIndex, update]);
 
   const categories = ["全部", "备考", "教师", "生活"];
   const filteredQuotes =

@@ -145,13 +145,15 @@ npx wrangler d1 execute keke-workbench-db --file=./schema.sql
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/data` | 获取所有数据 |
-| POST | `/api/data` | 批量保存（body: {key: value, ...}） |
+| GET | `/api/data` | 获取所有数据（返回 `{key: value, ...}`） |
+| POST | `/api/data` | 批量保存（upsert 语义，仅更新 body 中提供的字段，不删除其他字段） |
+| DELETE | `/api/data` | 清空所有数据（用于「清空所有数据」功能） |
 | GET | `/api/data/{key}` | 获取某项数据 |
-| PUT | `/api/data/{key}` | 保存某项数据 |
+| PUT | `/api/data/{key}` | 保存某项数据（插入或替换） |
 | DELETE | `/api/data/{key}` | 删除某项数据 |
 
 所有请求需要 `X-Access-Token` 头（值等于环境变量 `ACCESS_TOKEN`）。
+所有请求有 10 秒超时，超时会返回友好错误提示。
 
 ## 九、扩展新功能
 

@@ -34,13 +34,25 @@ export const onRequestOptions: PagesFunction<Env> = async () => {
   return new Response(null, { status: 204, headers: JSON_HEADERS });
 };
 
+/** 从路由参数中安全提取 key（可能是 string 或 string[]） */
+function extractKey(params: Record<string, string | string[]>): string {
+  const raw = params.key;
+  return Array.isArray(raw) ? raw[0] : raw;
+}
+
 /** GET /api/data/{key} */
 export const onRequestGet: PagesFunction<Env> = async (context) => {
   if (!checkAuth(context.request, context.env)) {
     return unauthorized();
   }
 
-  const key = context.params.key as string;
+  const key = extractKey(context.params);
+  if (!key) {
+    return new Response(JSON.stringify({ error: "缺少 key 参数" }), {
+      status: 400,
+      headers: JSON_HEADERS,
+    });
+  }
   try {
     const result = await context.env.DB.prepare(
       "SELECT value FROM app_data WHERE key = ?",
@@ -76,7 +88,13 @@ export const onRequestPut: PagesFunction<Env> = async (context) => {
     return unauthorized();
   }
 
-  const key = context.params.key as string;
+  const key = extractKey(context.params);
+  if (!key) {
+    return new Response(JSON.stringify({ error: "缺少 key 参数" }), {
+      status: 400,
+      headers: JSON_HEADERS,
+    });
+  }
   try {
     const value = await context.request.text();
     const updatedAt = new Date().toISOString();
@@ -107,7 +125,13 @@ export const onRequestDelete: PagesFunction<Env> = async (context) => {
     return unauthorized();
   }
 
-  const key = context.params.key as string;
+  const key = extractKey(context.params);
+  if (!key) {
+    return new Response(JSON.stringify({ error: "缺少 key 参数" }), {
+      status: 400,
+      headers: JSON_HEADERS,
+    });
+  }
   try {
     await context.env.DB.prepare("DELETE FROM app_data WHERE key = ?")
       .bind(key)

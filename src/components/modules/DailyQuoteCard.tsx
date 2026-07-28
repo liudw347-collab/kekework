@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { todayISO } from "@/lib/utils";
 
 /** 每日一言语录库 */
@@ -25,6 +25,14 @@ export const QUOTES: { text: string; category: string }[] = [
   { text: "你不是一个人在战斗，云朵和星星都在为你加油。", category: "生活" },
 ];
 
+/** 根据日期生成稳定的语录索引 */
+function computeQuoteIndex(date: string): number {
+  const seed = date
+    .split("-")
+    .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
+  return seed % QUOTES.length;
+}
+
 interface DailyQuoteCardProps {
   onClick?: () => void;
   quoteState: { date: string; index: number };
@@ -35,27 +43,27 @@ interface DailyQuoteCardProps {
  * 首页内嵌的每日一言卡片
  * - 每天自动换一句
  * - 点击进入完整模块
+ *
+ * 逻辑说明：
+ * - 如果 quoteState.date === today，直接使用 quoteState.index
+ * - 否则按日期种子计算新索引，并通过 useEffect 异步同步到云端
  */
 export function DailyQuoteCard({
   onClick,
   quoteState,
   onUpdate,
 }: DailyQuoteCardProps) {
-  const [quote] = useState(() => {
-    const today = todayISO();
-    let index: number;
-    if (quoteState.date === today) {
-      index = quoteState.index % QUOTES.length;
-    } else {
-      // 按日期生成稳定索引，每天不同
-      const seed = today
-        .split("-")
-        .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
-      index = seed % QUOTES.length;
+  const today = todayISO();
+  const isToday = quoteState.date === today;
+  const index = isToday ? quoteState.index % QUOTES.length : computeQuoteIndex(today);
+  const quote = QUOTES[index];
+
+  // 日期变化时，异步同步新索引到云端（在 useEffect 中，避免渲染期间触发 setState）
+  useEffect(() => {
+    if (!isToday) {
       onUpdate({ date: today, index });
     }
-    return QUOTES[index];
-  });
+  }, [isToday, today, index, onUpdate]);
 
   return (
     <section

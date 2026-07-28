@@ -75,7 +75,7 @@ export const onRequestGet: PagesFunction<Env> = async (context) => {
   }
 };
 
-/** POST /api/data - 批量保存（替换所有） */
+/** POST /api/data - 批量保存（upsert 语义，仅更新 body 中提供的字段） */
 export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (!checkAuth(context.request, context.env)) {
     return unauthorized();
@@ -103,6 +103,28 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     return new Response(
       JSON.stringify({
         error: "数据库写入失败",
+        detail: err instanceof Error ? err.message : String(err),
+      }),
+      { status: 500, headers: JSON_HEADERS },
+    );
+  }
+};
+
+/** DELETE /api/data - 清空所有数据（用于「清空所有数据」功能） */
+export const onRequestDelete: PagesFunction<Env> = async (context) => {
+  if (!checkAuth(context.request, context.env)) {
+    return unauthorized();
+  }
+
+  try {
+    await context.env.DB.prepare("DELETE FROM app_data").run();
+    return new Response(JSON.stringify({ success: true }), {
+      headers: JSON_HEADERS,
+    });
+  } catch (err) {
+    return new Response(
+      JSON.stringify({
+        error: "数据库清空失败",
         detail: err instanceof Error ? err.message : String(err),
       }),
       { status: 500, headers: JSON_HEADERS },

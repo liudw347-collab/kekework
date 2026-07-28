@@ -6,9 +6,12 @@ import type { NextConfig } from "next";
  * 部署到 Cloudflare Pages 时使用静态导出 (output: "export")
  * - 构建命令：npx next build
  * - 输出目录：out
- * - 所有数据通过 localStorage 持久化，无需后端
+ * - 前端为纯静态 HTML/JS
+ * - 后端通过 Cloudflare Pages Functions 提供（functions/api/ 目录）
+ * - 数据存储在 Cloudflare D1 数据库，跨设备同步
  *
- * 注意：静态导出不支持 API Routes，已移除 src/app/api/ 目录
+ * 注意：静态导出不支持 Next.js API Routes (src/app/api/)，
+ *       后端逻辑使用 Cloudflare Pages Functions 替代。
  */
 const nextConfig: NextConfig = {
   output: "export",
