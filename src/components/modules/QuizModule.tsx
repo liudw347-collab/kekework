@@ -52,12 +52,12 @@ interface QuizModuleProps {
   onBack: () => void;
 }
 
-/** 示例题库 - 用户首次导入参考（也用于下载模板） */
+/** 示例题库 - 用户首次导入参考（也用于下载模板），通用知识题 */
 const SAMPLE_QUESTIONS: Question[] = [
   {
     id: "q-sample-1",
     type: "single",
-    category: "教育学",
+    category: "文学",
     stem: "“学而不思则罔，思而不学则殆”出自哪部典籍？",
     options: ["《大学》", "《论语》", "《中庸》", "《孟子》"],
     answer: 1,
@@ -66,47 +66,47 @@ const SAMPLE_QUESTIONS: Question[] = [
   {
     id: "q-sample-2",
     type: "judge",
-    category: "心理学",
-    stem: "皮亚杰认为儿童认知发展经历了四个阶段，其中前运算阶段的儿童已具备守恒概念。",
+    category: "常识",
+    stem: "地球是太阳系中距离太阳最近的行星。",
     options: ["正确", "错误"],
     answer: 1,
     analysis:
-      "错误。前运算阶段（2-7岁）的儿童尚未具备守恒概念，具体运算阶段（7-11岁）才逐步形成。",
+      "错误。距离太阳最近的行星是水星，地球是第三近的行星。",
   },
   {
     id: "q-sample-3",
     type: "multiple",
-    category: "教育学",
-    stem: "下列属于建构主义学习理论核心观点的有？",
+    category: "健康",
+    stem: "下列哪些是保持健康的好习惯？",
     options: [
-      "知识是客观的、确定的",
-      "学习是学习者主动建构意义的过程",
-      "教学是教师传递知识的过程",
-      "学习应处于真实情境中",
+      "每天喝足够的水",
+      "熬夜学习到凌晨",
+      "规律运动",
+      "多吃蔬菜水果",
     ],
-    answer: [1, 3],
+    answer: [0, 2, 3],
     analysis:
-      "建构主义认为知识不是客观确定的，而是学习者主动建构的；学习应在真实情境中发生。",
+      "充足饮水、规律运动、均衡饮食都是健康习惯；熬夜会损害身体，不应提倡。",
   },
   {
     id: "q-sample-4",
     type: "single",
-    category: "教育法规",
-    stem: "《中华人民共和国义务教育法》规定，义务教育阶段免收的是？",
-    options: ["学费", "杂费", "学费和杂费", "书本费"],
+    category: "历史",
+    stem: "中国古代四大发明不包括以下哪一项？",
+    options: ["造纸术", "印刷术", "蒸汽机", "火药"],
     answer: 2,
     analysis:
-      "《义务教育法》第二条规定：国家实施义务教育，不收学费、杂费。",
+      "中国古代四大发明是造纸术、印刷术、火药、指南针。蒸汽机是工业革命时期瓦特改良的。",
   },
   {
     id: "q-sample-5",
     type: "judge",
-    category: "心理学",
-    stem: "动机强度与学习效率之间呈线性关系，动机越强效率越高。",
+    category: "常识",
+    stem: "动机强度越高，工作效率就越高。",
     options: ["正确", "错误"],
     answer: 1,
     analysis:
-      "错误。根据耶克斯-多德森定律，动机强度与学习效率呈倒U型曲线，中等强度的动机最有利于学习。",
+      "错误。根据耶克斯-多德森定律，动机强度与效率呈倒U型曲线，中等强度的动机最有利于工作。",
   },
 ];
 
@@ -387,7 +387,7 @@ export function QuizModule({ onBack }: QuizModuleProps) {
                     [
                       {
                         type: "single",
-                        category: "教育学",
+                        category: "分类名",
                         stem: "题目内容",
                         options: ["A", "B", "C", "D"],
                         answer: 0,

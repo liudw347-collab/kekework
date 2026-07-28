@@ -140,7 +140,7 @@ export function ProfileModule({ onBack, onOpenModule }: ProfileModuleProps) {
           </div>
           <h2 className="text-lg font-semibold">可可老师</h2>
           <p className="text-xs text-muted-foreground mt-1">
-            {data.examCountdown.examName}备考中 · 加油上岸！
+            {data.examCountdown.examName}倒计时中 · 坚持就是胜利！
           </p>
           {/* 同步状态指示 */}
           <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px]">
@@ -299,7 +299,7 @@ export function ProfileModule({ onBack, onOpenModule }: ProfileModuleProps) {
             <Info className="w-4 h-4 mt-0.5 text-secondary-foreground shrink-0" />
             <div className="text-xs text-secondary-foreground leading-relaxed space-y-1">
               <p className="font-medium text-sm mb-1">关于可可的工作台</p>
-              <p>· 个人工具网站，专为教师编备考设计</p>
+              <p>· 个人工具网站，让生活更有条理</p>
               <p>· 数据云端同步，多设备查看一致</p>
               <p>· 不同手机登录相同访问令牌即可看到相同数据</p>
               <p>· 建议定期导出数据做备份</p>

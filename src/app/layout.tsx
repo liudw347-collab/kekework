@@ -5,8 +5,8 @@ import { AppDataProvider } from "@/context/AppDataContext";
 
 export const metadata: Metadata = {
   title: "可可的工作台 ☁️",
-  description: "可可老师的个人工具网站 - 备考、刷题、生活记录一站式（云端同步）",
-  keywords: ["教师编备考", "刷题", "经期记录", "待办清单", "个人工具", "云端同步"],
+  description: "可可老师的个人工具网站 - 倒数日、刷题、生活记录一站式（云端同步）",
+  keywords: ["倒数日", "刷题", "经期记录", "待办清单", "个人工具", "云端同步"],
   authors: [{ name: "可可老师" }],
   manifest: "/manifest.webmanifest",
   appleWebApp: {

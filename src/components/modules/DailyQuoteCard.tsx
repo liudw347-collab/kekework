@@ -6,10 +6,10 @@ import { todayISO } from "@/lib/utils";
 /** 每日一言语录库 */
 export const QUOTES: { text: string; category: string }[] = [
   // 备考鼓励
-  { text: "每一道题都是通往讲台的台阶，加油，未来的可可老师！", category: "备考" },
+  { text: "每一份努力都是通往理想的台阶，加油！", category: "备考" },
   { text: "今天比昨天进步一点点，就是了不起的成就。", category: "备考" },
   { text: "坚持不是因为没有困难，而是因为心中有光。", category: "备考" },
-  { text: "你背过的每一个知识点，都会在考场上回响。", category: "备考" },
+  { text: "你背过的每一个知识点，都会在未来某个时刻派上用场。", category: "备考" },
   { text: "慢慢来，比较快。理解一道题胜过死记十道题。", category: "备考" },
   // 教师寄语
   { text: "教育不是注满一桶水，而是点燃一把火。", category: "教师" },

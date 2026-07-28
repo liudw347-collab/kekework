@@ -9,7 +9,7 @@ export interface ExamCountdownState {
   targetDate: string;
   /** 开始日期 YYYY-MM-DD，用于计算坚持天数 */
   startDate: string;
-  /** 事件名称（用户自定义，如"教师编考试"、"生日"、"婚礼"等） */
+  /** 事件名称（用户自定义，如"考试"、"生日"、"纪念日"等） */
   examName: string;
   /** 事件类型图标 emoji，默认 🎯 */
   icon?: string;

@@ -115,7 +115,7 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
                   <Input
                     value={examName}
                     onChange={(e) => setExamName(e.target.value)}
-                    placeholder="例如：教师编考试、生日、婚礼..."
+                    placeholder="例如：考试、生日、纪念日..."
                     maxLength={20}
                   />
                 </div>

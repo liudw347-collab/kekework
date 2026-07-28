@@ -147,7 +147,7 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="例如：河北省教育厅"
+                    placeholder="例如：百度"
                   />
                 </div>
                 <div className="space-y-2">
@@ -163,7 +163,7 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
                   <Input
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    placeholder="例如：官方机构 / 备考资料"
+                    placeholder="例如：常用网站 / 工具"
                   />
                 </div>
                 <div className="space-y-2">
@@ -264,10 +264,14 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
             💡 推荐添加
           </h3>
           <div className="text-xs text-secondary-foreground space-y-1">
-            <p>· 学信网：https://www.chsi.com.cn/</p>
-            <p>· 中国教师研修网：https://www.teacherclub.com.cn/</p>
-            <p>· 一起考教师：可下载 APP</p>
+            <p>· 微信网页版：https://wx.qq.com/</p>
+            <p>· 番茄 ToDo：https://tomato.today/</p>
+            <p>· 石墨文档：https://shimo.im/</p>
+            <p>· 哔哩哔哩：https://www.bilibili.com/</p>
           </div>
+          <p className="text-[10px] text-muted-foreground mt-2">
+            点击右上方"添加"按钮，把这些网址加入书签
+          </p>
         </section>
       </ModuleContainer>
     </>
