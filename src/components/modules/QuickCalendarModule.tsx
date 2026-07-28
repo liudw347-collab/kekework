@@ -1,12 +1,17 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
-import { storage } from "@/lib/storage";
-import { todayISO, formatChineseDate, daysBetween, addDays } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { useAppData } from "@/context/AppDataContext";
+import {
+  todayISO,
+  formatChineseDate,
+  daysBetween,
+  addDays,
+  cn,
+} from "@/lib/utils";
 
 interface QuickCalendarModuleProps {
   onBack: () => void;
@@ -22,22 +27,14 @@ interface DayInfo {
 const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 
 export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
+  const { data } = useAppData();
   const [viewYear, setViewYear] = useState(new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(new Date().getMonth());
-  const [, setTick] = useState(0);
 
   const today = todayISO();
-
-  // 从各模块读取重要日期
-  const examDate = useMemo(() => storage.getExamCountdown().targetDate, []);
-  const periodRecords = useMemo(() => storage.getPeriodRecords(), []);
-  const periodSettings = useMemo(() => storage.getPeriodSettings(), []);
-
-  useEffect(() => {
-    const handler = () => setTick((t) => t + 1);
-    window.addEventListener("keke:data-updated", handler);
-    return () => window.removeEventListener("keke:data-updated", handler);
-  }, []);
+  const examDate = data.examCountdown.targetDate;
+  const periodRecords = data.periodRecords;
+  const periodSettings = data.periodSettings;
 
   /** 计算日历网格 */
   const days: DayInfo[] = useMemo(() => {
@@ -46,7 +43,6 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
     const startWeekday = firstDay.getDay();
     const totalDays = lastDay.getDate();
 
-    // 上月填充
     const prevLastDay = new Date(viewYear, viewMonth, 0).getDate();
     const result: DayInfo[] = [];
 
@@ -55,7 +51,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
     const sorted = [...periodRecords].sort((a, b) =>
       a.startDate < b.startDate ? -1 : 1,
     );
-    sorted.forEach((r, i) => {
+    sorted.forEach((r) => {
       const start = r.startDate;
       const end = addDays(start, r.duration - 1);
       periodRanges.push({ start, end });
@@ -66,6 +62,17 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
         periodRanges.push({ start: nextStart, end: nextEnd });
       }
     });
+
+    function getMarks(dateStr: string): DayInfo["marks"] {
+      const marks: DayInfo["marks"] = [];
+      if (periodRanges.some((r) => dateStr >= r.start && dateStr <= r.end)) {
+        marks.push({ type: "period", label: "经期" });
+      }
+      if (dateStr === examDate) {
+        marks.push({ type: "exam", label: "考试" });
+      }
+      return marks;
+    }
 
     // 上月填充
     for (let i = startWeekday - 1; i >= 0; i--) {
@@ -95,7 +102,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
     }
 
     // 下月填充
-    const remaining = 42 - result.length; // 6 行 × 7 列
+    const remaining = 42 - result.length;
     for (let d = 1; d <= remaining; d++) {
       const dateStr = new Date(viewYear, viewMonth + 1, d)
         .toISOString()
@@ -106,23 +113,6 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
         isToday: dateStr === today,
         marks: getMarks(dateStr),
       });
-    }
-
-    function getMarks(dateStr: string) {
-      const marks: DayInfo["marks"] = [];
-      // 经期
-      if (
-        periodRanges.some(
-          (r) => dateStr >= r.start && dateStr <= r.end,
-        )
-      ) {
-        marks.push({ type: "period", label: "经期" });
-      }
-      // 考试
-      if (dateStr === examDate) {
-        marks.push({ type: "exam", label: "考试" });
-      }
-      return marks;
     }
 
     return result;
@@ -153,6 +143,9 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
   };
 
   const examDaysLeft = daysBetween(today, examDate);
+  const sortedPeriods = [...periodRecords].sort((a, b) =>
+    a.startDate < b.startDate ? 1 : -1,
+  );
 
   return (
     <>
@@ -268,14 +261,14 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
             <div className="flex items-center justify-between p-2 rounded-lg bg-destructive/5">
               <span className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-destructive" />
-                {storage.getExamCountdown().examName}
+                {data.examCountdown.examName}
               </span>
               <span className="text-xs text-muted-foreground">
                 {formatChineseDate(examDate)} ·{" "}
                 {examDaysLeft > 0 ? `还有 ${examDaysLeft} 天` : "已到"}
               </span>
             </div>
-            {periodRecords.length > 0 && (
+            {sortedPeriods.length > 0 && (
               <div className="flex items-center justify-between p-2 rounded-lg bg-pink-50">
                 <span className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-pink-500" />
@@ -284,9 +277,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
                 <span className="text-xs text-muted-foreground">
                   {formatChineseDate(
                     addDays(
-                      [...periodRecords].sort((a, b) =>
-                        a.startDate < b.startDate ? 1 : -1,
-                      )[0].startDate,
+                      sortedPeriods[0].startDate,
                       periodSettings.defaultCycle,
                     ),
                   )}

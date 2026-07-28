@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,50 +16,48 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Plus, Minus, Settings, Droplets } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
 import type { WaterState } from "@/lib/types";
-import { todayISO } from "@/lib/utils";
+import { todayISO, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface WaterReminderModuleProps {
   onBack: () => void;
 }
 
 export function WaterReminderModule({ onBack }: WaterReminderModuleProps) {
-  // 懒加载初始状态，并处理跨天重置
-  const [state, setState] = useState<WaterState>(() => {
-    const stored = storage.getWaterState();
+  const { data, update } = useAppData();
+
+  // 跨天重置
+  const state = useMemo<WaterState>(() => {
     const today = todayISO();
-    if (stored.todayDate !== today) {
+    if (data.waterState.todayDate !== today) {
       const next: WaterState = {
-        ...stored,
+        ...data.waterState,
         todayDate: today,
         todayCount: 0,
         history: {
-          ...stored.history,
-          [stored.todayDate]: stored.todayCount,
+          ...data.waterState.history,
+          [data.waterState.todayDate]: data.waterState.todayCount,
         },
       };
-      storage.setWaterState(next);
+      // 异步更新到云端
+      void update("waterState", next);
       return next;
     }
-    return stored;
-  });
+    return data.waterState;
+  }, [data.waterState, update]);
+
   const [settingOpen, setSettingOpen] = useState(false);
   const [goalInput, setGoalInput] = useState(state.dailyGoal);
   const { toast } = useToast();
 
-  const notify = () => window.dispatchEvent(new Event("keke:data-updated"));
-
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const next: WaterState = {
       ...state,
       todayCount: Math.min(state.todayCount + 1, 50),
     };
-    setState(next);
-    storage.setWaterState(next);
-    notify();
+    await update("waterState", next);
     if (next.todayCount === state.dailyGoal) {
       toast({
         title: "达成今日目标！🎉",
@@ -68,26 +66,27 @@ export function WaterReminderModule({ onBack }: WaterReminderModuleProps) {
     }
   };
 
-  const handleSubtract = () => {
+  const handleSubtract = async () => {
     if (state.todayCount === 0) return;
     const next: WaterState = {
       ...state,
       todayCount: state.todayCount - 1,
     };
-    setState(next);
-    storage.setWaterState(next);
-    notify();
+    await update("waterState", next);
   };
 
-  const handleSaveGoal = () => {
+  const openSettings = () => {
+    setGoalInput(state.dailyGoal);
+    setSettingOpen(true);
+  };
+
+  const handleSaveGoal = async () => {
     const next: WaterState = {
       ...state,
       dailyGoal: Math.max(1, Math.min(30, goalInput)),
     };
-    setState(next);
-    storage.setWaterState(next);
+    await update("waterState", next);
     setSettingOpen(false);
-    notify();
     toast({ title: "已更新目标 ✅" });
   };
 
@@ -107,7 +106,7 @@ export function WaterReminderModule({ onBack }: WaterReminderModuleProps) {
         right={
           <Dialog open={settingOpen} onOpenChange={setSettingOpen}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={openSettings}>
                 <Settings className="w-4 h-4" />
               </Button>
             </DialogTrigger>
@@ -154,10 +153,7 @@ export function WaterReminderModule({ onBack }: WaterReminderModuleProps) {
           <p className="text-sm text-sky-600 mt-1">杯</p>
 
           <div className="mt-4 max-w-xs mx-auto">
-            <Progress
-              value={progressPct}
-              className="h-3 bg-white/60"
-            />
+            <Progress value={progressPct} className="h-3 bg-white/60" />
             <p className="text-xs text-sky-600 mt-2">
               {progressPct >= 100
                 ? "今日目标已达成 💪"

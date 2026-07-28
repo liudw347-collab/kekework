@@ -5,7 +5,7 @@ import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Heart, Share2 } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
 import { QUOTES } from "./DailyQuoteCard";
 import { todayISO } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -15,16 +15,21 @@ interface DailyQuoteModuleProps {
 }
 
 export function DailyQuoteModule({ onBack }: DailyQuoteModuleProps) {
+  const { data, update } = useAppData();
+  const today = todayISO();
+
+  // 计算当前 index（与首页保持一致）
   const [index, setIndex] = useState(() => {
-    const today = todayISO();
-    const state = storage.getQuoteState();
-    if (state.date === today) {
-      return state.index % QUOTES.length;
+    if (data.lastQuoteDate === today) {
+      return data.lastQuoteIndex % QUOTES.length;
     }
     const seed = today
       .split("-")
       .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
-    return seed % QUOTES.length;
+    const idx = seed % QUOTES.length;
+    void update("lastQuoteDate", today);
+    void update("lastQuoteIndex", idx);
+    return idx;
   });
   const [category, setCategory] = useState<string>("全部");
   const { toast } = useToast();
@@ -45,6 +50,7 @@ export function DailyQuoteModule({ onBack }: DailyQuoteModuleProps) {
       next = QUOTES.indexOf(pool[Math.floor(Math.random() * pool.length)]);
     }
     setIndex(next);
+    void update("lastQuoteIndex", next);
   };
 
   const handleShare = async () => {
@@ -130,7 +136,10 @@ export function DailyQuoteModule({ onBack }: DailyQuoteModuleProps) {
               return (
                 <button
                   key={i}
-                  onClick={() => setIndex(realIndex)}
+                  onClick={() => {
+                    setIndex(realIndex);
+                    void update("lastQuoteIndex", realIndex);
+                  }}
                   className={`w-full text-left p-3 rounded-xl text-sm transition-all ${
                     realIndex === index
                       ? "bg-primary/10 border border-primary/30"
@@ -140,7 +149,9 @@ export function DailyQuoteModule({ onBack }: DailyQuoteModuleProps) {
                   <div className="flex items-start gap-2">
                     <Heart className="w-3 h-3 mt-0.5 text-primary shrink-0" />
                     <div className="flex-1">
-                      <p className="text-foreground leading-relaxed">{q.text}</p>
+                      <p className="text-foreground leading-relaxed">
+                        {q.text}
+                      </p>
                       <span className="text-[10px] text-muted-foreground mt-1 inline-block">
                         {q.category}
                       </span>

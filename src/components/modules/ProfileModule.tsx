@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -21,57 +20,44 @@ import {
   Heart,
   Database,
   FileJson,
+  KeyRound,
+  RefreshCw,
 } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
+import {
+  serializeAllData,
+  parseImportedData,
+} from "@/lib/storage";
 import { downloadFile, todayISO } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import type { AppAllData } from "@/lib/types";
+import { TokenDialog } from "@/components/TokenDialog";
 
 interface ProfileModuleProps {
   onBack: () => void;
 }
 
 export function ProfileModule({ onBack }: ProfileModuleProps) {
-  const [stats, setStats] = useState({
-    questions: 0,
-    todos: 0,
-    bookmarks: 0,
-    periodRecords: 0,
-    studyDays: 0,
-  });
+  const { data, exportAll, importAll, clearAll, reload } = useAppData();
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [tokenDialogOpen, setTokenDialogOpen] = useState(false);
   const [importText, setImportText] = useState("");
   const { toast } = useToast();
 
-  useEffect(() => {
-    const load = () => {
-      setStats({
-        questions: storage.getQuizQuestions().length,
-        todos: storage.getTodos().length,
-        bookmarks: storage.getBookmarks().length,
-        periodRecords: storage.getPeriodRecords().length,
-        studyDays: storage.getStudyCheckin().length,
-      });
-    };
-    load();
-    const handler = () => load();
-    window.addEventListener("keke:data-updated", handler);
-    return () => window.removeEventListener("keke:data-updated", handler);
-  }, []);
+  const stats = {
+    questions: data.quizQuestions.length,
+    todos: data.todos.length,
+    bookmarks: data.bookmarks.length,
+    periodRecords: data.periodRecords.length,
+    studyDays: data.studyCheckinDates.length,
+    quizAnswered: data.quizStats.totalAnswered,
+  };
 
   /** 导出全部数据 */
   const handleExport = () => {
-    const data = storage.exportAll();
-    const exportPayload = {
-      _meta: {
-        app: "可可的工作台",
-        version: "v1",
-        exportedAt: new Date().toISOString(),
-      },
-      data,
-    };
+    const allData = exportAll();
+    const json = serializeAllData(allData);
     downloadFile(
-      JSON.stringify(exportPayload, null, 2),
+      json,
       `可可工作台_备份_${todayISO()}.json`,
     );
     toast({
@@ -81,18 +67,15 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
   };
 
   /** 导入数据 */
-  const handleImport = () => {
+  const handleImport = async () => {
     try {
-      const parsed = JSON.parse(importText);
-      // 兼容两种格式：直接 data 或带 _meta 包装
-      const data: Partial<AppAllData> = parsed.data || parsed;
-      storage.importAll(data);
+      const parsed = parseImportedData(importText);
+      await importAll(parsed);
       setImportDialogOpen(false);
       setImportText("");
-      window.dispatchEvent(new Event("keke:data-updated"));
       toast({
         title: "导入成功 ✅",
-        description: "数据已恢复",
+        description: "数据已同步到云端",
       });
     } catch (e) {
       toast({
@@ -104,10 +87,10 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
   };
 
   /** 清空所有数据 */
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (
       !confirm(
-        "⚠️ 警告：此操作将清空所有本地数据，包括题库、待办、经期记录、书签等。\n\n建议先导出备份。\n\n确定继续吗？",
+        "⚠️ 警告：此操作将清空云端和本地的所有数据，包括题库、待办、经期记录、书签等。\n\n建议先导出备份。\n\n确定继续吗？",
       )
     ) {
       return;
@@ -115,8 +98,7 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
     if (!confirm("再次确认：真的要清空所有数据吗？此操作不可恢复！")) {
       return;
     }
-    storage.clearAll();
-    window.dispatchEvent(new Event("keke:data-updated"));
+    await clearAll();
     toast({ title: "已清空所有数据" });
   };
 
@@ -125,8 +107,17 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
       <ModuleHeader
         title="我的"
         emoji="👤"
-        description="数据管理 · 关于"
+        description="数据管理 · 云端同步 · 关于"
         onBack={onBack}
+        right={
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setTokenDialogOpen(true)}
+          >
+            <KeyRound className="w-4 h-4" />
+          </Button>
+        }
       />
 
       <ModuleContainer className="space-y-4">
@@ -139,6 +130,10 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
           <p className="text-xs text-muted-foreground mt-1">
             河北教师编备考中 · 加油上岸！
           </p>
+          <div className="flex items-center justify-center gap-1.5 mt-2 text-[10px] text-emerald-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>云端同步已启用</span>
+          </div>
         </section>
 
         {/* 数据统计 */}
@@ -155,13 +150,40 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
             <DataStat label="学习打卡" value={stats.studyDays} emoji="🔥" />
             <DataStat
               label="已做题数"
-              value={storage.getQuizStats().totalAnswered}
+              value={stats.quizAnswered}
               emoji="📝"
             />
           </div>
         </section>
 
-        {/* 数据管理 */}
+        {/* 云端同步 */}
+        <section className="rounded-2xl p-4 bg-card border border-border/50 space-y-2">
+          <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
+            <RefreshCw className="w-4 h-4" />
+            云端同步
+          </h3>
+          <Button
+            onClick={() => {
+              reload();
+              toast({ title: "已重新同步云端数据" });
+            }}
+            variant="outline"
+            className="w-full rounded-full"
+          >
+            <RefreshCw className="w-4 h-4 mr-2" />
+            手动同步
+          </Button>
+          <Button
+            onClick={() => setTokenDialogOpen(true)}
+            variant="outline"
+            className="w-full rounded-full"
+          >
+            <KeyRound className="w-4 h-4 mr-2" />
+            设置访问令牌
+          </Button>
+        </section>
+
+        {/* 数据备份 */}
         <section className="rounded-2xl p-4 bg-card border border-border/50 space-y-2">
           <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
             <FileJson className="w-4 h-4" />
@@ -189,7 +211,7 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
               </DialogHeader>
               <div className="space-y-3 py-2">
                 <p className="text-xs text-muted-foreground">
-                  粘贴之前导出的 JSON 数据。注意：导入会覆盖现有同名数据。
+                  粘贴之前导出的 JSON 数据。注意：导入会覆盖现有同名数据，并同步到云端。
                 </p>
                 <textarea
                   value={importText}
@@ -250,7 +272,8 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
             <div className="text-xs text-secondary-foreground leading-relaxed space-y-1">
               <p className="font-medium text-sm mb-1">关于可可的工作台</p>
               <p>· 个人工具网站，专为教师编备考设计</p>
-              <p>· 所有数据保存在本地浏览器，不会上传</p>
+              <p>· 数据通过 Cloudflare D1 数据库云端同步</p>
+              <p>· 不同手机登录相同访问令牌即可看到相同数据</p>
               <p>· 建议定期导出数据做备份</p>
               <p>· 部署在 Cloudflare Pages，全球加速</p>
               <p className="pt-2 flex items-center gap-1">
@@ -261,6 +284,8 @@ export function ProfileModule({ onBack }: ProfileModuleProps) {
           </div>
         </section>
       </ModuleContainer>
+
+      <TokenDialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen} />
     </>
   );
 }

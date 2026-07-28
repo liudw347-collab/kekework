@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef } from "react";
+import { useMemo, useState, useRef } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,11 +43,10 @@ import {
   Download,
   BookOpen,
 } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
 import type { Question, QuizStats, QuizRecord, QuestionType } from "@/lib/types";
-import { uid, downloadFile } from "@/lib/utils";
+import { uid, downloadFile, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface QuizModuleProps {
   onBack: () => void;
@@ -114,8 +113,10 @@ const SAMPLE_QUESTIONS: Question[] = [
 type Mode = "sequence" | "random" | "wrong";
 
 export function QuizModule({ onBack }: QuizModuleProps) {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [stats, setStats] = useState<QuizStats>(storage.getQuizStats());
+  const { data, update } = useAppData();
+  const questions = data.quizQuestions;
+  const stats = data.quizStats;
+
   const [activeTab, setActiveTab] = useState<"practice" | "stats" | "manage">(
     "practice",
   );
@@ -135,22 +136,15 @@ export function QuizModule({ onBack }: QuizModuleProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
-  // 初始加载题库
-  useEffect(() => {
-    const q = storage.getQuizQuestions();
-    if (q.length === 0) {
-      // 首次使用，加载示例题库
-      storage.setQuizQuestions(SAMPLE_QUESTIONS);
-      setQuestions(SAMPLE_QUESTIONS);
-    } else {
-      setQuestions(q);
-    }
-    setStats(storage.getQuizStats());
-  }, []);
-
-  const notify = () => {
-    window.dispatchEvent(new Event("keke:data-updated"));
-  };
+  // 首次使用：加载示例题库
+  const loadedRef = useRef(false);
+  if (!loadedRef.current && questions.length === 0) {
+    loadedRef.current = true;
+    // 异步加载示例题库（不影响首次渲染）
+    setTimeout(() => {
+      void update("quizQuestions", SAMPLE_QUESTIONS);
+    }, 0);
+  }
 
   // 知识点分类列表
   const categories = useMemo(() => {
@@ -197,7 +191,7 @@ export function QuizModule({ onBack }: QuizModuleProps) {
   const currentQuestion = quizList[currentIndex];
 
   /** 提交当前题 */
-  const submitAnswer = () => {
+  const submitAnswer = async () => {
     if (selectedAnswer === null) {
       toast({ title: "请先选择答案", variant: "destructive" });
       return;
@@ -220,9 +214,7 @@ export function QuizModule({ onBack }: QuizModuleProps) {
         : Array.from(new Set([...stats.wrongQuestionIds, currentQuestion.id])),
       records: [...stats.records, record],
     };
-    setStats(newStats);
-    storage.setQuizStats(newStats);
-    notify();
+    await update("quizStats", newStats);
 
     toast({
       title: correct ? "答对啦 🎉" : "答错了 😢",
@@ -251,13 +243,13 @@ export function QuizModule({ onBack }: QuizModuleProps) {
   };
 
   /** 导入 JSON 题库 */
-  const handleImport = () => {
+  const handleImport = async () => {
     try {
-      const data = JSON.parse(jsonInput);
-      if (!Array.isArray(data)) {
+      const parsed = JSON.parse(jsonInput);
+      if (!Array.isArray(parsed)) {
         throw new Error("题库必须是数组");
       }
-      const validQuestions: Question[] = data
+      const validQuestions: Question[] = parsed
         .filter((q: unknown): q is Question => {
           const item = q as Record<string, unknown>;
           return (
@@ -286,11 +278,9 @@ export function QuizModule({ onBack }: QuizModuleProps) {
         ...questions,
         ...validQuestions.filter((q) => !existingStems.has(q.stem)),
       ];
-      setQuestions(merged);
-      storage.setQuizQuestions(merged);
+      await update("quizQuestions", merged);
       setImportDialogOpen(false);
       setJsonInput("");
-      notify();
       toast({
         title: "导入成功 ✅",
         description: `共导入 ${validQuestions.length} 道题`,
@@ -315,28 +305,24 @@ export function QuizModule({ onBack }: QuizModuleProps) {
   };
 
   /** 清空错题本 */
-  const clearWrongQuestions = () => {
+  const clearWrongQuestions = async () => {
     const newStats: QuizStats = {
       ...stats,
       wrongQuestionIds: [],
     };
-    setStats(newStats);
-    storage.setQuizStats(newStats);
-    notify();
+    await update("quizStats", newStats);
     toast({ title: "错题本已清空" });
   };
 
   /** 重置统计 */
-  const resetStats = () => {
+  const resetStats = async () => {
     const empty: QuizStats = {
       totalAnswered: 0,
       correctCount: 0,
       wrongQuestionIds: [],
       records: [],
     };
-    setStats(empty);
-    storage.setQuizStats(empty);
-    notify();
+    await update("quizStats", empty);
     toast({ title: "统计已重置" });
   };
 
@@ -444,7 +430,10 @@ export function QuizModule({ onBack }: QuizModuleProps) {
       />
 
       <ModuleContainer>
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+        <Tabs
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as typeof activeTab)}
+        >
           <TabsList className="grid grid-cols-3 w-full">
             <TabsTrigger value="practice">练习</TabsTrigger>
             <TabsTrigger value="stats">统计</TabsTrigger>
@@ -454,7 +443,6 @@ export function QuizModule({ onBack }: QuizModuleProps) {
           {/* 练习 Tab */}
           <TabsContent value="practice" className="space-y-4 mt-4">
             {quizList.length === 0 || !currentQuestion ? (
-              /* 配置 + 开始 */
               <div className="space-y-4">
                 <div className="rounded-2xl p-4 bg-card border border-border/50 space-y-4">
                   <h3 className="font-semibold flex items-center gap-2">
@@ -471,7 +459,9 @@ export function QuizModule({ onBack }: QuizModuleProps) {
                       <SelectContent>
                         <SelectItem value="sequence">顺序练习</SelectItem>
                         <SelectItem value="random">随机练习</SelectItem>
-                        <SelectItem value="wrong">错题重练（{stats.wrongQuestionIds.length}）</SelectItem>
+                        <SelectItem value="wrong">
+                          错题重练（{stats.wrongQuestionIds.length}）
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -522,7 +512,11 @@ export function QuizModule({ onBack }: QuizModuleProps) {
           {/* 统计 Tab */}
           <TabsContent value="stats" className="space-y-4 mt-4">
             <div className="grid grid-cols-3 gap-3">
-              <StatCard label="已做题数" value={stats.totalAnswered} emoji="📚" />
+              <StatCard
+                label="已做题数"
+                value={stats.totalAnswered}
+                emoji="📚"
+              />
               <StatCard label="正确率" value={`${accuracy}%`} emoji="🎯" />
               <StatCard
                 label="错题数"
@@ -639,11 +633,9 @@ export function QuizModule({ onBack }: QuizModuleProps) {
               <Button
                 variant="outline"
                 className="w-full text-destructive"
-                onClick={() => {
+                onClick={async () => {
                   if (confirm("确定清空所有题目吗？此操作不可恢复")) {
-                    setQuestions([]);
-                    storage.setQuizQuestions([]);
-                    notify();
+                    await update("quizQuestions", []);
                     toast({ title: "题库已清空" });
                   }
                 }}
@@ -866,7 +858,9 @@ function QuestionCard({
             正确答案：
             <span className="font-semibold text-foreground">
               {Array.isArray(correctAnswer)
-                ? correctAnswer.map((i) => String.fromCharCode(65 + i)).join("、")
+                ? correctAnswer
+                    .map((i) => String.fromCharCode(65 + i))
+                    .join("、")
                 : question.type === "judge"
                   ? correctAnswer === 0
                     ? "正确"

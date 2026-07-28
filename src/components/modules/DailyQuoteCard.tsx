@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { storage } from "@/lib/storage";
 import { todayISO } from "@/lib/utils";
 
 /** 每日一言语录库 */
@@ -28,6 +27,8 @@ export const QUOTES: { text: string; category: string }[] = [
 
 interface DailyQuoteCardProps {
   onClick?: () => void;
+  quoteState: { date: string; index: number };
+  onUpdate: (state: { date: string; index: number }) => void;
 }
 
 /**
@@ -35,21 +36,23 @@ interface DailyQuoteCardProps {
  * - 每天自动换一句
  * - 点击进入完整模块
  */
-export function DailyQuoteCard({ onClick }: DailyQuoteCardProps) {
-  // 懒加载初始值，避免在 effect 中调用 setState
-  const [quote] = useState<{ text: string; category: string }>(() => {
+export function DailyQuoteCard({
+  onClick,
+  quoteState,
+  onUpdate,
+}: DailyQuoteCardProps) {
+  const [quote] = useState(() => {
     const today = todayISO();
-    const state = storage.getQuoteState();
     let index: number;
-    if (state.date === today) {
-      index = state.index % QUOTES.length;
+    if (quoteState.date === today) {
+      index = quoteState.index % QUOTES.length;
     } else {
       // 按日期生成稳定索引，每天不同
       const seed = today
         .split("-")
         .reduce((acc, s) => acc * 31 + parseInt(s, 10), 0);
       index = seed % QUOTES.length;
-      storage.setQuoteState({ date: today, index });
+      onUpdate({ date: today, index });
     }
     return QUOTES[index];
   });

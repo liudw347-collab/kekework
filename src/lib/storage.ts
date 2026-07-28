@@ -1,63 +1,25 @@
 /**
- * 可可的工作台 - 本地存储工具
- * 基于 localStorage 的数据持久化，带默认值与版本管理
+ * 可可的工作台 - 默认值与类型常量
+ *
+ * 注意：本文件不再包含 localStorage 读写函数。
+ * 所有数据通过 AppDataContext 在内存中维护，由 cloud-api.ts 与云端同步。
+ *
+ * 兼容性：仍保留 exportAll/importAll 函数，但基于外部传入的 data 进行操作。
  */
 import type {
   AppAllData,
   Bookmark,
   ExamCountdownState,
-  PeriodRecord,
   PeriodSettings,
-  Question,
   QuizStats,
-  TodoItem,
   WaterState,
 } from "./types";
-
-const STORAGE_PREFIX = "keke_workbench_";
-const DATA_VERSION = "v1";
-
-// 各模块的存储 key
-const KEYS = {
-  examCountdown: `${STORAGE_PREFIX}exam_countdown_${DATA_VERSION}`,
-  quizQuestions: `${STORAGE_PREFIX}quiz_questions_${DATA_VERSION}`,
-  quizStats: `${STORAGE_PREFIX}quiz_stats_${DATA_VERSION}`,
-  periodRecords: `${STORAGE_PREFIX}period_records_${DATA_VERSION}`,
-  periodSettings: `${STORAGE_PREFIX}period_settings_${DATA_VERSION}`,
-  todos: `${STORAGE_PREFIX}todos_${DATA_VERSION}`,
-  waterState: `${STORAGE_PREFIX}water_state_${DATA_VERSION}`,
-  bookmarks: `${STORAGE_PREFIX}bookmarks_${DATA_VERSION}`,
-  studyCheckin: `${STORAGE_PREFIX}study_checkin_${DATA_VERSION}`,
-  quoteState: `${STORAGE_PREFIX}quote_state_${DATA_VERSION}`,
-} as const;
-
-// ============ 通用读取/写入 ============
-function read<T>(key: string, defaultValue: T): T {
-  if (typeof window === "undefined") return defaultValue;
-  try {
-    const raw = window.localStorage.getItem(key);
-    if (!raw) return defaultValue;
-    return JSON.parse(raw) as T;
-  } catch {
-    return defaultValue;
-  }
-}
-
-function write<T>(key: string, value: T): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.localStorage.setItem(key, JSON.stringify(value));
-  } catch (e) {
-    console.warn("写入 localStorage 失败：", e);
-  }
-}
 
 // ============ 默认值 ============
 const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export const DEFAULT_EXAM_COUNTDOWN: ExamCountdownState = {
   examName: "河北教师编考试",
-  // 默认目标日期：当前日期 + 60 天
   targetDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
     .toISOString()
     .slice(0, 10),
@@ -134,92 +96,61 @@ export const DEFAULT_BOOKMARKS: Bookmark[] = [
   },
 ];
 
-// ============ 各模块 API ============
-export const storage = {
-  // 备考倒计时
-  getExamCountdown: () => read(KEYS.examCountdown, DEFAULT_EXAM_COUNTDOWN),
-  setExamCountdown: (v: ExamCountdownState) => write(KEYS.examCountdown, v),
+/** 获取完整默认数据（用于初始化） */
+export function getDefaultData(): AppAllData {
+  return {
+    examCountdown: { ...DEFAULT_EXAM_COUNTDOWN },
+    quizQuestions: [],
+    quizStats: { ...DEFAULT_QUIZ_STATS },
+    periodRecords: [],
+    periodSettings: { ...DEFAULT_PERIOD_SETTINGS, reminders: [...DEFAULT_PERIOD_SETTINGS.reminders] },
+    todos: [],
+    waterState: { ...DEFAULT_WATER_STATE },
+    bookmarks: [...DEFAULT_BOOKMARKS],
+    studyCheckinDates: [],
+    lastQuoteDate: "",
+    lastQuoteIndex: 0,
+  };
+}
 
-  // 刷题 - 题库
-  getQuizQuestions: () => read<Question[]>(KEYS.quizQuestions, []),
-  setQuizQuestions: (v: Question[]) => write(KEYS.quizQuestions, v),
+// ============ localStorage 兼容层（仅用于访问令牌 + 数据降级备份） ============
+const TOKEN_KEY = "keke_access_token";
 
-  // 刷题 - 统计
-  getQuizStats: () => read(KEYS.quizStats, DEFAULT_QUIZ_STATS),
-  setQuizStats: (v: QuizStats) => write(KEYS.quizStats, v),
-
-  // 经期记录
-  getPeriodRecords: () => read<PeriodRecord[]>(KEYS.periodRecords, []),
-  setPeriodRecords: (v: PeriodRecord[]) => write(KEYS.periodRecords, v),
-
-  // 经期设置
-  getPeriodSettings: () => read(KEYS.periodSettings, DEFAULT_PERIOD_SETTINGS),
-  setPeriodSettings: (v: PeriodSettings) => write(KEYS.periodSettings, v),
-
-  // 待办
-  getTodos: () => read<TodoItem[]>(KEYS.todos, []),
-  setTodos: (v: TodoItem[]) => write(KEYS.todos, v),
-
-  // 喝水
-  getWaterState: () => read(KEYS.waterState, DEFAULT_WATER_STATE),
-  setWaterState: (v: WaterState) => write(KEYS.waterState, v),
-
-  // 书签
-  getBookmarks: () => read(KEYS.bookmarks, DEFAULT_BOOKMARKS),
-  setBookmarks: (v: Bookmark[]) => write(KEYS.bookmarks, v),
-
-  // 学习打卡
-  getStudyCheckin: () => read<string[]>(KEYS.studyCheckin, []),
-  setStudyCheckin: (v: string[]) => write(KEYS.studyCheckin, v),
-
-  // 每日一言
-  getQuoteState: () =>
-    read<{ date: string; index: number }>(KEYS.quoteState, {
-      date: "",
-      index: 0,
-    }),
-  setQuoteState: (v: { date: string; index: number }) =>
-    write(KEYS.quoteState, v),
-
-  // ============ 导出 / 导入 全部数据 ============
-  exportAll: (): AppAllData => {
-    const todayCheckin = storage.getStudyCheckin();
-    const quoteState = storage.getQuoteState();
-    return {
-      examCountdown: storage.getExamCountdown(),
-      quizQuestions: storage.getQuizQuestions(),
-      quizStats: storage.getQuizStats(),
-      periodRecords: storage.getPeriodRecords(),
-      periodSettings: storage.getPeriodSettings(),
-      todos: storage.getTodos(),
-      waterState: storage.getWaterState(),
-      bookmarks: storage.getBookmarks(),
-      studyCheckinDates: todayCheckin,
-      lastQuoteDate: quoteState.date,
-      lastQuoteIndex: quoteState.index,
-    };
+export const tokenStorage = {
+  get(): string {
+    if (typeof window === "undefined") return "";
+    return window.localStorage.getItem(TOKEN_KEY) || "";
   },
-
-  importAll: (data: Partial<AppAllData>): void => {
-    if (data.examCountdown) storage.setExamCountdown(data.examCountdown);
-    if (data.quizQuestions) storage.setQuizQuestions(data.quizQuestions);
-    if (data.quizStats) storage.setQuizStats(data.quizStats);
-    if (data.periodRecords) storage.setPeriodRecords(data.periodRecords);
-    if (data.periodSettings) storage.setPeriodSettings(data.periodSettings);
-    if (data.todos) storage.setTodos(data.todos);
-    if (data.waterState) storage.setWaterState(data.waterState);
-    if (data.bookmarks) storage.setBookmarks(data.bookmarks);
-    if (data.studyCheckinDates) storage.setStudyCheckin(data.studyCheckinDates);
-    if (data.lastQuoteDate !== undefined || data.lastQuoteIndex !== undefined) {
-      const current = storage.getQuoteState();
-      storage.setQuoteState({
-        date: data.lastQuoteDate ?? current.date,
-        index: data.lastQuoteIndex ?? current.index,
-      });
+  set(token: string): void {
+    if (typeof window === "undefined") return;
+    if (token) {
+      window.localStorage.setItem(TOKEN_KEY, token);
+    } else {
+      window.localStorage.removeItem(TOKEN_KEY);
     }
   },
-
-  clearAll: (): void => {
-    Object.values(KEYS).forEach((k) => window.localStorage.removeItem(k));
-  },
 };
+
+// ============ 数据导出/导入工具函数 ============
+/** 将 AppAllData 序列化为可导出的 JSON 字符串 */
+export function serializeAllData(data: AppAllData): string {
+  return JSON.stringify(
+    {
+      _meta: {
+        app: "可可的工作台",
+        version: "v1",
+        exportedAt: new Date().toISOString(),
+      },
+      data,
+    },
+    null,
+    2,
+  );
+}
+
+/** 解析导入的 JSON 数据 */
+export function parseImportedData(json: string): Partial<AppAllData> {
+  const parsed = JSON.parse(json);
+  // 兼容两种格式：直接 data 或带 _meta 包装
+  return (parsed.data || parsed) as Partial<AppAllData>;
+}

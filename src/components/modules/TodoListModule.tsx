@@ -14,12 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, Trash2, CheckSquare, ListTodo } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { Plus, Trash2, ListTodo } from "lucide-react";
+import { useAppData } from "@/context/AppDataContext";
 import type { TodoItem, TodoCategory } from "@/lib/types";
-import { uid, todayISO } from "@/lib/utils";
+import { uid, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface TodoListModuleProps {
   onBack: () => void;
@@ -38,19 +37,14 @@ const CATEGORY_COLOR: Record<TodoCategory, string> = {
 };
 
 export function TodoListModule({ onBack }: TodoListModuleProps) {
-  const [todos, setTodos] = useState<TodoItem[]>(() =>
-    storage
-      .getTodos()
-      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1)),
-  );
+  const { data, update } = useAppData();
+  const todos = data.todos;
   const [content, setContent] = useState("");
   const [category, setCategory] = useState<TodoCategory>("study");
   const [filter, setFilter] = useState<"all" | TodoCategory>("all");
   const { toast } = useToast();
 
-  const notify = () => window.dispatchEvent(new Event("keke:data-updated"));
-
-  const handleAdd = () => {
+  const handleAdd = async () => {
     const text = content.trim();
     if (!text) {
       toast({ title: "请输入待办内容", variant: "destructive" });
@@ -64,38 +58,36 @@ export function TodoListModule({ onBack }: TodoListModuleProps) {
       createdAt: new Date().toISOString(),
     };
     const next = [item, ...todos];
-    setTodos(next);
-    storage.setTodos(next);
+    await update("todos", next);
     setContent("");
-    notify();
   };
 
-  const handleToggle = (id: string) => {
+  const handleToggle = async (id: string) => {
     const next = todos.map((t) =>
       t.id === id ? { ...t, completed: !t.completed } : t,
     );
-    setTodos(next);
-    storage.setTodos(next);
-    notify();
+    await update("todos", next);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     const next = todos.filter((t) => t.id !== id);
-    setTodos(next);
-    storage.setTodos(next);
-    notify();
+    await update("todos", next);
   };
 
-  const handleClearCompleted = () => {
+  const handleClearCompleted = async () => {
     if (!confirm("确定清除所有已完成的待办吗？")) return;
     const next = todos.filter((t) => !t.completed);
-    setTodos(next);
-    storage.setTodos(next);
-    notify();
+    await update("todos", next);
     toast({ title: "已清除完成项" });
   };
 
-  const filtered = todos.filter((t) =>
+  // 排序：未完成在前，按创建时间倒序
+  const sortedTodos = [...todos].sort((a, b) => {
+    if (a.completed !== b.completed) return a.completed ? 1 : -1;
+    return a.createdAt < b.createdAt ? 1 : -1;
+  });
+
+  const filtered = sortedTodos.filter((t) =>
     filter === "all" ? true : t.category === filter,
   );
   const pending = todos.filter((t) => !t.completed).length;
@@ -232,7 +224,9 @@ export function TodoListModule({ onBack }: TodoListModuleProps) {
         {todos.length > 0 && (
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-xl p-2 bg-card border border-border/50">
-              <div className="text-lg font-bold tabular-nums">{todos.length}</div>
+              <div className="text-lg font-bold tabular-nums">
+                {todos.length}
+              </div>
               <div className="text-[10px] text-muted-foreground">总计</div>
             </div>
             <div className="rounded-xl p-2 bg-card border border-border/50">

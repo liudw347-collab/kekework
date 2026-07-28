@@ -12,10 +12,9 @@ import {
   Compass,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { storage } from "@/lib/storage";
-import { daysBetween, todayISO, formatChineseDate } from "@/lib/utils";
-import { cn } from "@/lib/utils";
+import { useMemo } from "react";
+import { daysBetween, todayISO, formatChineseDate, cn } from "@/lib/utils";
+import { useAppData } from "@/context/AppDataContext";
 import { DailyQuoteCard } from "./DailyQuoteCard";
 
 interface HomeDashboardProps {
@@ -40,87 +39,61 @@ interface ModuleCard {
   emoji: string;
   desc: string;
   icon: LucideIcon;
-  color: string; // tailwind class for background
-  textColor: string;
+  color: string;
   onClick: () => void;
   badge?: string;
 }
 
 export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
-  // 各模块的简要数据，显示在卡片角标
-  const [summary, setSummary] = useState({
-    countdown: 0,
-    studyDays: 0,
-    quizCount: 0,
-    quizAccuracy: 0,
-    periodNext: "",
-    periodInDays: 0,
-    todoPending: 0,
-    waterToday: 0,
-    waterGoal: 8,
-  });
+  const { data, update } = useAppData();
 
-  useEffect(() => {
-    const load = () => {
-      const exam = storage.getExamCountdown();
-      const today = todayISO();
-      const cd = daysBetween(today, exam.targetDate);
+  const summary = useMemo(() => {
+    const today = todayISO();
+    const cd = daysBetween(today, data.examCountdown.targetDate);
+    const studyDays = data.studyCheckinDates.length;
+    const accuracy =
+      data.quizStats.totalAnswered > 0
+        ? Math.round(
+            (data.quizStats.correctCount / data.quizStats.totalAnswered) * 100,
+          )
+        : 0;
 
-      const checkins = storage.getStudyCheckin();
-      const studyDays = checkins.length;
-
-      const stats = storage.getQuizStats();
-      const accuracy =
-        stats.totalAnswered > 0
-          ? Math.round((stats.correctCount / stats.totalAnswered) * 100)
-          : 0;
-
-      const periods = storage.getPeriodRecords().sort((a, b) =>
+    let periodNext = "";
+    let periodInDays = 0;
+    let inPeriod = false;
+    if (data.periodRecords.length > 0) {
+      const sorted = [...data.periodRecords].sort((a, b) =>
         a.startDate < b.startDate ? -1 : 1,
       );
-      let periodNext = "";
-      let periodInDays = 0;
-      if (periods.length > 0) {
-        const last = periods[periods.length - 1];
-        const settings = storage.getPeriodSettings();
-        const next = new Date(last.startDate + "T00:00:00");
-        next.setDate(next.getDate() + settings.defaultCycle);
-        periodNext = next.toISOString().slice(0, 10);
-        periodInDays = daysBetween(today, periodNext);
-      }
+      const last = sorted[sorted.length - 1];
+      const next = new Date(last.startDate + "T00:00:00");
+      next.setDate(next.getDate() + data.periodSettings.defaultCycle);
+      periodNext = next.toISOString().slice(0, 10);
+      periodInDays = daysBetween(today, periodNext);
 
-      const todos = storage.getTodos();
-      const todoPending = todos.filter((t) => !t.completed).length;
+      // 判断是否在经期内
+      const lastEnd = new Date(last.startDate + "T00:00:00");
+      lastEnd.setDate(lastEnd.getDate() + last.duration);
+      inPeriod = today >= last.startDate && today < lastEnd.toISOString().slice(0, 10);
+    }
 
-      const water = storage.getWaterState();
-      const todayCount = water.todayDate === today ? water.todayCount : 0;
+    const todoPending = data.todos.filter((t) => !t.completed).length;
+    const todayCount =
+      data.waterState.todayDate === today ? data.waterState.todayCount : 0;
 
-      setSummary({
-        countdown: cd,
-        studyDays,
-        quizCount: stats.totalAnswered,
-        quizAccuracy: accuracy,
-        periodNext,
-        periodInDays,
-        todoPending,
-        waterToday: todayCount,
-        waterGoal: water.dailyGoal,
-      });
+    return {
+      countdown: cd,
+      studyDays,
+      quizCount: data.quizStats.totalAnswered,
+      quizAccuracy: accuracy,
+      periodNext,
+      periodInDays,
+      inPeriod,
+      todoPending,
+      waterToday: todayCount,
+      waterGoal: data.waterState.dailyGoal,
     };
-    load();
-    const handler = () => load();
-    window.addEventListener("keke:data-updated", handler);
-    window.addEventListener("storage", handler);
-    return () => {
-      window.removeEventListener("keke:data-updated", handler);
-      window.removeEventListener("storage", handler);
-    };
-  }, []);
-
-  /** 派发数据更新事件，通知其他组件刷新 */
-  const notifyUpdate = () => {
-    window.dispatchEvent(new Event("keke:data-updated"));
-  };
+  }, [data]);
 
   const cards: ModuleCard[] = [
     {
@@ -130,7 +103,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: "距考试还有",
       icon: CalendarClock,
       color: "bg-primary/15",
-      textColor: "text-primary",
       onClick: () => onOpenModule("countdown"),
       badge: `${summary.countdown} 天`,
     },
@@ -141,7 +113,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: `已做 ${summary.quizCount} 题 · 正确率 ${summary.quizAccuracy}%`,
       icon: BookOpen,
       color: "bg-secondary",
-      textColor: "text-secondary-foreground",
       onClick: () => onOpenModule("quiz"),
     },
     {
@@ -149,13 +120,12 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       title: "经期记录",
       emoji: "🌸",
       desc: summary.periodNext
-        ? summary.periodInDays > 0
-          ? `预计 ${formatChineseDate(summary.periodNext)}（${summary.periodInDays}天后）`
-          : "经期中"
+        ? summary.inPeriod
+          ? "经期中"
+          : `预计 ${formatChineseDate(summary.periodNext)}（${summary.periodInDays}天后）`
         : "点击记录",
       icon: Flower2,
       color: "bg-pink-100/70",
-      textColor: "text-pink-700",
       onClick: () => onOpenModule("period"),
     },
     {
@@ -165,7 +135,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: `${summary.todoPending} 项待办`,
       icon: CheckSquare,
       color: "bg-accent/60",
-      textColor: "text-accent-foreground",
       onClick: () => onOpenModule("todo"),
     },
     {
@@ -175,7 +144,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: `今日 ${summary.waterToday}/${summary.waterGoal} 杯`,
       icon: Droplets,
       color: "bg-sky-100/70",
-      textColor: "text-sky-700",
       onClick: () => onOpenModule("water"),
     },
     {
@@ -185,7 +153,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: "查看本月",
       icon: Calendar,
       color: "bg-purple-100/60",
-      textColor: "text-purple-700",
       onClick: () => onOpenModule("calendar"),
     },
     {
@@ -195,7 +162,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: "5 个实用工具",
       icon: Wrench,
       color: "bg-amber-100/70",
-      textColor: "text-amber-700",
       onClick: () => onOpenModule("toolbox"),
     },
     {
@@ -205,7 +171,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: "常用书签",
       icon: Compass,
       color: "bg-emerald-100/70",
-      textColor: "text-emerald-700",
       onClick: () => onOpenModule("nav"),
     },
     {
@@ -215,7 +180,6 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       desc: "今日寄语",
       icon: Sparkles,
       color: "bg-orange-100/60",
-      textColor: "text-orange-700",
       onClick: () => onOpenModule("quote"),
     },
   ];
@@ -258,7 +222,18 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       </section>
 
       {/* 每日一言卡片 */}
-      <DailyQuoteCard onClick={() => onOpenModule("quote")} />
+      <DailyQuoteCard
+        onClick={() => onOpenModule("quote")}
+        quoteState={{
+          date: data.lastQuoteDate,
+          index: data.lastQuoteIndex,
+        }}
+        onUpdate={(s) =>
+          update("lastQuoteDate", s.date).then(() =>
+            update("lastQuoteIndex", s.index),
+          )
+        }
+      />
 
       {/* 功能宫格 */}
       <section>

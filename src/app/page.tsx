@@ -2,8 +2,8 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Home as HomeIcon, BookOpen, User } from "lucide-react";
 
+import { AppLoadingGate } from "@/components/AppLoadingGate";
 import { TopBar } from "@/components/layout/TopBar";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { HomeDashboard } from "@/components/modules/HomeDashboard";
@@ -17,7 +17,6 @@ import { DailyQuoteModule } from "@/components/modules/DailyQuoteModule";
 import { QuickCalendarModule } from "@/components/modules/QuickCalendarModule";
 import { QuickNavModule } from "@/components/modules/QuickNavModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
-import { cn } from "@/lib/utils";
 
 /**
  * 主视图类型
@@ -110,24 +109,26 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
-      <TopBar />
+    <AppLoadingGate>
+      <div className="min-h-screen flex flex-col bg-background">
+        <TopBar />
 
-      <main className="flex-1 pb-24 pt-2">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeModule ?? tab}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.25, ease: "easeOut" }}
-          >
-            {renderContent()}
-          </motion.div>
-        </AnimatePresence>
-      </main>
+        <main className="flex-1 pb-24 pt-2">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeModule ?? tab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              {renderContent()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-      <BottomNav tab={tab} onSwitch={switchTab} />
-    </div>
+        <BottomNav tab={tab} onSwitch={switchTab} />
+      </div>
+    </AppLoadingGate>
   );
 }

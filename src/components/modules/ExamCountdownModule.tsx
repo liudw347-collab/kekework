@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,9 +15,8 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Calendar as CalendarIcon, Flame, Target, Trophy } from "lucide-react";
-import { storage } from "@/lib/storage";
-import type { ExamCountdownState } from "@/lib/types";
-import { daysBetween, todayISO, addDays } from "@/lib/utils";
+import { useAppData } from "@/context/AppDataContext";
+import { daysBetween, todayISO, addDays, cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
 interface ExamCountdownModuleProps {
@@ -25,10 +24,11 @@ interface ExamCountdownModuleProps {
 }
 
 export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
-  const [state, setState] = useState<ExamCountdownState>(storage.getExamCountdown());
-  const [checkins, setCheckins] = useState<string[]>(storage.getStudyCheckin());
+  const { data, update } = useAppData();
+  const state = data.examCountdown;
+  const checkins = data.studyCheckinDates;
+
   const [editing, setEditing] = useState(false);
-  // 临时编辑字段
   const [examName, setExamName] = useState(state.examName);
   const [targetDate, setTargetDate] = useState(state.targetDate);
   const [startDate, setStartDate] = useState(state.startDate);
@@ -45,40 +45,39 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
   );
   const checkedToday = checkins.includes(today);
 
-  /** 派发数据更新事件 */
-  const notify = () => {
-    window.dispatchEvent(new Event("keke:data-updated"));
+  // 同步编辑字段（打开对话框时）
+  const openEdit = () => {
+    setExamName(state.examName);
+    setTargetDate(state.targetDate);
+    setStartDate(state.startDate);
+    setEditing(true);
   };
 
-  const handleSave = () => {
-    const next: ExamCountdownState = {
+  const handleSave = async () => {
+    const next = {
       examName: examName.trim() || "考试",
       targetDate,
       startDate,
     };
-    setState(next);
-    storage.setExamCountdown(next);
+    await update("examCountdown", next);
     setEditing(false);
-    notify();
     toast({ title: "已保存设置 ✅" });
   };
 
-  const handleCheckin = () => {
+  const handleCheckin = async () => {
     if (checkedToday) {
       toast({ title: "今天已经打过卡啦~", description: "明天继续加油！" });
       return;
     }
     const next = [...checkins, today].sort();
-    setCheckins(next);
-    storage.setStudyCheckin(next);
-    notify();
+    await update("studyCheckinDates", next);
     toast({
       title: "打卡成功！🎉",
       description: `已坚持学习 ${next.length} 天，继续加油！`,
     });
   };
 
-  // 计算最近 14 天的打卡热力图
+  // 最近 14 天的打卡热力图
   const last14Days = Array.from({ length: 14 }, (_, i) =>
     addDays(today, -13 + i),
   );
@@ -93,7 +92,7 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
         right={
           <Dialog open={editing} onOpenChange={setEditing}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm">
+              <Button variant="ghost" size="sm" onClick={openEdit}>
                 设置
               </Button>
             </DialogTrigger>
@@ -190,7 +189,10 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
           </div>
 
           {/* 14 天热力图 */}
-          <div className="grid grid-cols-14 gap-1 mt-3" style={{ gridTemplateColumns: "repeat(14, 1fr)" }}>
+          <div
+            className="grid gap-1 mt-3"
+            style={{ gridTemplateColumns: "repeat(14, 1fr)" }}
+          >
             {last14Days.map((d) => {
               const checked = checkins.includes(d);
               const isToday = d === today;
@@ -198,11 +200,11 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
                 <div
                   key={d}
                   title={`${d}${checked ? " · 已打卡" : ""}`}
-                  className={`aspect-square rounded-sm transition-all ${
-                    checked
-                      ? "bg-primary"
-                      : "bg-muted"
-                  } ${isToday ? "ring-2 ring-primary ring-offset-1" : ""}`}
+                  className={cn(
+                    "aspect-square rounded-sm transition-all",
+                    checked ? "bg-primary" : "bg-muted",
+                    isToday && "ring-2 ring-primary ring-offset-1",
+                  )}
                 />
               );
             })}

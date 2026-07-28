@@ -21,7 +21,7 @@ import {
   Pencil,
   Compass,
 } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
 import type { Bookmark } from "@/lib/types";
 import { uid } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -33,9 +33,8 @@ interface QuickNavModuleProps {
 const EMOJI_OPTIONS = ["📚", "🏫", "📋", "💻", "⭐", "☁️", "🔗", "📖", "🎓", "📝", "🌐", "📌"];
 
 export function QuickNavModule({ onBack }: QuickNavModuleProps) {
-  const [bookmarks, setBookmarks] = useState<Bookmark[]>(() =>
-    storage.getBookmarks(),
-  );
+  const { data, update } = useAppData();
+  const bookmarks = data.bookmarks;
   const [editing, setEditing] = useState<Bookmark | null>(null);
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState("");
@@ -44,9 +43,7 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
   const [category, setCategory] = useState("常用");
   const { toast } = useToast();
 
-  const notify = () => window.dispatchEvent(new Event("keke:data-updated"));
-
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!title.trim() || !url.trim()) {
       toast({ title: "请填写名称和网址", variant: "destructive" });
       return;
@@ -62,8 +59,7 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
           ? { ...b, title: title.trim(), url: finalUrl, icon, category }
           : b,
       );
-      setBookmarks(next);
-      storage.setBookmarks(next);
+      await update("bookmarks", next);
       toast({ title: "已更新 ✅" });
     } else {
       const bm: Bookmark = {
@@ -74,8 +70,7 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
         category,
       };
       const next = [...bookmarks, bm];
-      setBookmarks(next);
-      storage.setBookmarks(next);
+      await update("bookmarks", next);
       toast({ title: "已添加 ✅" });
     }
     closeDialog();
@@ -98,11 +93,10 @@ export function QuickNavModule({ onBack }: QuickNavModuleProps) {
     setCategory(bm.category);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (!confirm("确定删除此书签吗？")) return;
     const next = bookmarks.filter((b) => b.id !== id);
-    setBookmarks(next);
-    storage.setBookmarks(next);
+    await update("bookmarks", next);
     toast({ title: "已删除" });
   };
 

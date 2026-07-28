@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ModuleHeader, ModuleContainer } from "@/components/layout/ModuleHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,42 +17,41 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Plus, Trash2, Settings, Heart, Calendar as CalIcon } from "lucide-react";
-import { storage } from "@/lib/storage";
+import { useAppData } from "@/context/AppDataContext";
 import type { PeriodRecord, PeriodSettings } from "@/lib/types";
 import {
   todayISO,
   daysBetween,
   addDays,
   formatChineseDate,
+  cn,
 } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { cn } from "@/lib/utils";
 
 interface PeriodTrackerModuleProps {
   onBack: () => void;
 }
 
 export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
-  const [records, setRecords] = useState<PeriodRecord[]>([]);
-  const [settings, setSettings] = useState<PeriodSettings>(
-    storage.getPeriodSettings(),
+  const { data, update } = useAppData();
+  const records = useMemo(
+    () =>
+      [...data.periodRecords].sort((a, b) =>
+        a.startDate < b.startDate ? -1 : 1,
+      ),
+    [data.periodRecords],
   );
+  const settings = data.periodSettings;
+
   const [adding, setAdding] = useState(false);
   const [editingSettings, setEditingSettings] = useState(false);
   const [newDate, setNewDate] = useState(todayISO());
   const [newDuration, setNewDuration] = useState(5);
   const [newNote, setNewNote] = useState("");
+  // 设置编辑临时字段
+  const [editCycle, setEditCycle] = useState(settings.defaultCycle);
+  const [editReminders, setEditReminders] = useState(settings.reminders.join("\n"));
   const { toast } = useToast();
-
-  useEffect(() => {
-    setRecords(
-      storage
-        .getPeriodRecords()
-        .sort((a, b) => (a.startDate < b.startDate ? -1 : 1)),
-    );
-  }, []);
-
-  const notify = () => window.dispatchEvent(new Event("keke:data-updated"));
 
   const today = todayISO();
 
@@ -72,11 +71,9 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
     const last = records[records.length - 1];
     const next = addDays(last.startDate, avgCycle);
     const inDays = daysBetween(today, next);
-    const inPeriod = daysBetween(today, addDays(last.startDate, last.duration));
     return {
       nextDate: next,
       inDays,
-      inPeriod, // >0 表示还在经期内
       lastStart: last.startDate,
       lastDuration: last.duration,
     };
@@ -106,7 +103,9 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
   const todayReminder = useMemo(() => {
     if (records.length === 0) return null;
     if (isMenstruating) {
-      return settings.reminders[Math.floor(Math.random() * settings.reminders.length)];
+      return settings.reminders[
+        Math.floor(Math.random() * settings.reminders.length)
+      ];
     }
     if (shouldWarn && nextPrediction) {
       return `预计 ${formatChineseDate(nextPrediction.nextDate)} 来月经，记得提前备好卫生用品哦~`;
@@ -114,7 +113,7 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
     return null;
   }, [isMenstruating, shouldWarn, nextPrediction, settings.reminders, records.length]);
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!newDate) {
       toast({ title: "请选择日期", variant: "destructive" });
       return;
@@ -127,29 +126,37 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
     const merged = [...records, next].sort((a, b) =>
       a.startDate < b.startDate ? -1 : 1,
     );
-    setRecords(merged);
-    storage.setPeriodRecords(merged);
+    await update("periodRecords", merged);
     setAdding(false);
     setNewDate(todayISO());
     setNewDuration(5);
     setNewNote("");
-    notify();
     toast({ title: "已记录 ✅" });
   };
 
-  const handleDelete = (date: string) => {
+  const handleDelete = async (date: string) => {
     if (!confirm("确定删除这条记录吗？")) return;
     const next = records.filter((r) => r.startDate !== date);
-    setRecords(next);
-    storage.setPeriodRecords(next);
-    notify();
+    await update("periodRecords", next);
     toast({ title: "已删除" });
   };
 
-  const handleSaveSettings = () => {
-    storage.setPeriodSettings(settings);
+  const openSettings = () => {
+    setEditCycle(settings.defaultCycle);
+    setEditReminders(settings.reminders.join("\n"));
+    setEditingSettings(true);
+  };
+
+  const handleSaveSettings = async () => {
+    const next: PeriodSettings = {
+      defaultCycle: Math.max(20, Math.min(45, editCycle)),
+      reminders: editReminders
+        .split("\n")
+        .map((s) => s.trim())
+        .filter(Boolean),
+    };
+    await update("periodSettings", next);
     setEditingSettings(false);
-    notify();
     toast({ title: "设置已保存 ✅" });
   };
 
@@ -164,7 +171,7 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
           <>
             <Dialog open={editingSettings} onOpenChange={setEditingSettings}>
               <DialogTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" onClick={openSettings}>
                   <Settings className="w-4 h-4" />
                 </Button>
               </DialogTrigger>
@@ -179,28 +186,17 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
                       type="number"
                       min={20}
                       max={45}
-                      value={settings.defaultCycle}
+                      value={editCycle}
                       onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          defaultCycle: parseInt(e.target.value) || 28,
-                        })
+                        setEditCycle(parseInt(e.target.value) || 28)
                       }
                     />
                   </div>
                   <div className="space-y-2">
                     <Label>温馨提醒文案（每行一条，随机展示）</Label>
                     <Textarea
-                      value={settings.reminders.join("\n")}
-                      onChange={(e) =>
-                        setSettings({
-                          ...settings,
-                          reminders: e.target.value
-                            .split("\n")
-                            .map((s) => s.trim())
-                            .filter(Boolean),
-                        })
-                      }
+                      value={editReminders}
+                      onChange={(e) => setEditReminders(e.target.value)}
                       rows={6}
                       placeholder="记得吃点羊肉暖暖身体哦~"
                     />
@@ -304,7 +300,10 @@ export function PeriodTrackerModule({ onBack }: PeriodTrackerModuleProps) {
               <h3 className="font-semibold text-amber-700">经期将至</h3>
               <p className="text-sm text-amber-600 mt-1">
                 预计 {formatChineseDate(nextPrediction!.nextDate)}（
-                {nextPrediction!.inDays === 0 ? "今天" : `${nextPrediction!.inDays} 天后`}）
+                {nextPrediction!.inDays === 0
+                  ? "今天"
+                  : `${nextPrediction!.inDays} 天后`}
+                ）
               </p>
               <p className="text-xs text-amber-600 mt-2 italic">
                 {todayReminder}

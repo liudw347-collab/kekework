@@ -1,54 +1,79 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# 依赖
+node_modules/
+.pnp
+.pnp.js
 
-# dependencies
-node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# 测试
+coverage/
 
-# testing
-/coverage
+# Next.js
+.next/
+out/
+build/
+dist/
 
-# next.js
-/.next/
-/out/
+# Cloudflare
+.wrangler/
+.dev.vars
 
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# 日志
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-.pnpm-debug.log*
-
-# env files (can opt-in for committing if needed)
-.env*
-
-# vercel
-.vercel
-
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-local-*
-.claude
-.z-ai-config
-*.log
 dev.log
-dev.out.log
-test
-prompt
-
 server.log
-# Skills directory
-/skills/
+
+# 系统
+.DS_Store
+*.pem
+Thumbs.db
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 环境变量（敏感信息，永远不要提交）
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 脚本目录（开发期临时文件）
+scripts/
+agent-ctx/
+
+# 上传的文件
+upload/
+
+# Z-scripts
+.zscripts/
+
+# 数据库
+*.sqlite
+*.db
+
+# 工作日志
+worklog.md
+next-env.d.ts
+tests/
+examples/
+
+# 数据库与日志
+db/
+.zscripts/
+
+# 框架无关文件
+mini-services/
+Caddyfile
+prisma/
+src/lib/db.ts
+
+# Skills 系统目录（开发环境用）
+skills/
+
+# 下载文件目录（运行时生成）
+download/
