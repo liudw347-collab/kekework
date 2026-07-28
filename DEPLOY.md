@@ -104,23 +104,72 @@ CREATE INDEX IF NOT EXISTS idx_app_data_updated_at ON app_data(updated_at);
 
 ## 🔧 第 7 步：绑定 D1 数据库（关键！漏了这步数据不工作）
 
-1. 进入你刚创建的 Pages 项目（在 **Workers & Pages** 列表里点击项目名）
-2. 点击顶部 **Settings** 标签
-3. 在左侧子菜单找到 **Bindings**（或 **Functions** → **D1 database bindings**）
-4. 点击 **Add binding** → 选择 **D1 database**
-5. 配置：
-   - **Variable name**：必须填 `DB`（**大小写敏感，必须是大写 DB**）
-   - **D1 database**：下拉选择 `keke-workbench-db`
-6. 点击 **Save**
+**好消息：本项目的 `wrangler.toml` 已经预配置好 D1 绑定，重新部署即可自动生效，无需在 Dashboard 手动操作！**
 
-### 第 8 步：重新部署让绑定生效
+### 方式 A：自动绑定（推荐，已配置好）
 
-**绑定数据库后必须重新部署一次才能生效！**
+项目的 `wrangler.toml` 中已经写了 D1 绑定配置：
 
-1. 回到 Pages 项目，点击顶部 **Deployments** 标签
-2. 找到最新的部署记录，点击右侧 **...** 菜单
+```toml
+[[d1_databases]]
+binding = "DB"
+database_name = "keke-workbench-db"
+database_id = "ee03190b-6d83-4f3c-aa99-131be34e96c3"  # 你的数据库 ID
+```
+
+**你只需要做一件事：重新部署**
+
+1. 进入 Pages 项目 → **Deployments** 标签
+2. 找到最新的部署记录 → 点击右侧 **...** 菜单
 3. 选择 **Retry deployment**
-4. 等 2-3 分钟，看到绿色 ✅ 即可
+4. 等 2-3 分钟，看到绿色 ✅
+
+### 方式 B：手动绑定（如果方式 A 不行）
+
+如果重新部署后 D1 仍未绑定，可以在 Dashboard 手动绑定：
+
+1. 进入 Pages 项目 → **Settings** → **Bindings**
+2. 点击 **Add binding** → **D1 database**
+3. **Variable name** 填 `DB`（**大写**，必须叫这个名字）
+4. **D1 database** 选择 `keke-workbench-db`
+5. 点击 **Save**
+6. **再次重新部署**（Deployments → Retry deployment）
+
+> 💡 如果 Settings → Bindings 里的 **Add 按钮点不动**（灰色），这是 Cloudflare 已知界面问题。直接用方式 A 的 `wrangler.toml` 配置即可，不依赖界面。
+
+### 第 8 步：验证部署是否成功
+
+部署完成后，**用浏览器打开下面这个网址**（把 `keke-workbench` 换成你的项目名）：
+
+```
+https://keke-workbench.pages.dev/api/health
+```
+
+应该看到类似这样的 JSON：
+
+```json
+{
+  "status": "ok",
+  "timestamp": "2026-07-28T...",
+  "checks": {
+    "dbBound": true,        ← 必须是 true
+    "tokenConfigured": true, ← 必须是 true
+    "dbConnected": true,    ← 必须是 true
+    "recordCount": 0        ← 数据库记录数（首次为 0）
+  }
+}
+```
+
+**如果三个 true 都有，说明部署完全成功！** 可以进入下一步首次登录。
+
+**如果有 false**，对照下表排查：
+
+| 字段 | 是 false 怎么办 |
+|------|----------------|
+| `dbBound` | D1 没绑定。检查 `wrangler.toml` 里 `database_id` 是否正确，重新部署 |
+| `tokenConfigured` | 环境变量没设。Settings → Environment variables 添加 `ACCESS_TOKEN` 后重新部署 |
+| `dbConnected` | 数据库表没建。回到 D1 数据库 Console 执行 `schema.sql` |
+| `dbError` 字段有内容 | 看错误信息，常见是表不存在（执行 schema.sql 即可） |
 
 ---
 

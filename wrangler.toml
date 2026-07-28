@@ -1,19 +1,19 @@
 # Cloudflare Pages 配置
-# 部署时需要在 Cloudflare Dashboard 中绑定 D1 数据库（变量名 DB）
-# 并设置环境变量 ACCESS_TOKEN
+#
+# 本文件由 Cloudflare Pages 在构建时自动读取，无需在 Dashboard 中手动绑定 D1。
+# 修改后只需重新部署（Retry deployment）即可生效。
+#
+# 需要在 Cloudflare Dashboard 中设置的环境变量：
+#   ACCESS_TOKEN = 你自定义的访问令牌（用于鉴权）
 
 name = "keke-workbench"
 compatibility_date = "2024-09-23"
 compatibility_flags = ["nodejs_compat"]
 pages_build_output_dir = "./out"
 
-# D1 数据库绑定（在 Cloudflare Dashboard 中也需要绑定）
-# 也可以在 wrangler.toml 中绑定：
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "keke-workbench-db"
-# database_id = "<在 Cloudflare 创建数据库后填入>"
-
-# 环境变量（建议在 Cloudflare Dashboard 中设置，更安全）
-# [vars]
-# ACCESS_TOKEN = "your-secret-token"
+# D1 数据库绑定
+# binding = "DB" 表示在 Functions 代码中通过 context.env.DB 访问
+[[d1_databases]]
+binding = "DB"
+database_name = "keke-workbench-db"
+database_id = "ee03190b-6d83-4f3c-aa99-131be34e96c3"
