@@ -23,6 +23,12 @@ interface ExamCountdownModuleProps {
   onBack: () => void;
 }
 
+/** 可选的事件图标 */
+const ICON_OPTIONS = [
+  "🎯", "📚", "🎓", "💼", "💼", "💪", "🏆", "⭐",
+  "❤️", "🌸", "🎉", "🎂", "💍", "✈️", "🏖️", "🚀",
+];
+
 export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
   const { data, update } = useAppData();
   const state = data.examCountdown;
@@ -32,32 +38,36 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
   const [examName, setExamName] = useState(state.examName);
   const [targetDate, setTargetDate] = useState(state.targetDate);
   const [startDate, setStartDate] = useState(state.startDate);
+  const [icon, setIcon] = useState(state.icon || "🎯");
   const { toast } = useToast();
 
   const today = todayISO();
   const daysLeft = daysBetween(today, state.targetDate);
-  const studyDays = checkins.length;
+  const checkinDays = checkins.length;
   const totalDays = Math.max(1, daysBetween(state.startDate, state.targetDate));
   const passedDays = Math.max(0, daysBetween(state.startDate, today));
   const progressPct = Math.min(
     100,
-    Math.round((passedDays / totalDays) * 100),
+    Math.max(0, Math.round((passedDays / totalDays) * 100)),
   );
   const checkedToday = checkins.includes(today);
 
-  // 同步编辑字段（打开对话框时）
+  const eventIcon = state.icon || "🎯";
+
   const openEdit = () => {
     setExamName(state.examName);
     setTargetDate(state.targetDate);
     setStartDate(state.startDate);
+    setIcon(state.icon || "🎯");
     setEditing(true);
   };
 
   const handleSave = async () => {
     const next = {
-      examName: examName.trim() || "考试",
+      examName: examName.trim() || "我的目标",
       targetDate,
       startDate,
+      icon,
     };
     await update("examCountdown", next);
     setEditing(false);
@@ -73,11 +83,10 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
     await update("studyCheckinDates", next);
     toast({
       title: "打卡成功！🎉",
-      description: `已坚持学习 ${next.length} 天，继续加油！`,
+      description: `已坚持 ${next.length} 天，继续加油！`,
     });
   };
 
-  // 最近 14 天的打卡热力图
   const last14Days = Array.from({ length: 14 }, (_, i) =>
     addDays(today, -13 + i),
   );
@@ -85,9 +94,9 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
   return (
     <>
       <ModuleHeader
-        title="备考倒计时"
-        emoji="📚"
-        description="距考试还有多少天 · 学习打卡"
+        title="倒数日"
+        emoji={eventIcon}
+        description={`距${state.examName}还有多少天 · 每日打卡`}
         onBack={onBack}
         right={
           <Dialog open={editing} onOpenChange={setEditing}>
@@ -98,19 +107,40 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>编辑考试信息</DialogTitle>
+                <DialogTitle>编辑倒数日</DialogTitle>
               </DialogHeader>
               <div className="space-y-4 py-2">
                 <div className="space-y-2">
-                  <Label>考试名称</Label>
+                  <Label>事件名称</Label>
                   <Input
                     value={examName}
                     onChange={(e) => setExamName(e.target.value)}
-                    placeholder="例如：河北教师编考试"
+                    placeholder="例如：教师编考试、生日、婚礼..."
+                    maxLength={20}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>目标考试日期</Label>
+                  <Label>选择图标</Label>
+                  <div className="grid grid-cols-8 gap-1.5">
+                    {ICON_OPTIONS.map((emo) => (
+                      <button
+                        key={emo}
+                        type="button"
+                        onClick={() => setIcon(emo)}
+                        className={cn(
+                          "aspect-square rounded-lg text-lg flex items-center justify-center transition-all",
+                          icon === emo
+                            ? "bg-primary/15 ring-2 ring-primary"
+                            : "bg-muted/50 hover:bg-muted",
+                        )}
+                      >
+                        {emo}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>目标日期</Label>
                   <Input
                     type="date"
                     value={targetDate}
@@ -118,7 +148,7 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>开始备考日期（用于计算坚持天数）</Label>
+                  <Label>开始日期（用于计算坚持天数）</Label>
                   <Input
                     type="date"
                     value={startDate}
@@ -142,23 +172,33 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
         <section className="rounded-3xl p-6 bg-gradient-to-br from-primary/15 via-accent/20 to-secondary/25 border border-primary/20 text-center">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground mb-2">
             <Target className="w-4 h-4" />
-            <span>{state.examName}</span>
+            <span className="truncate max-w-[200px]">{state.examName}</span>
           </div>
+          <div className="text-5xl mb-2">{eventIcon}</div>
           <div
-            className={`text-7xl font-bold tabular-nums ${
+            className={cn(
+              "text-7xl font-bold tabular-nums",
               daysLeft > 30
                 ? "text-primary"
                 : daysLeft > 7
                   ? "text-orange-500"
-                  : "text-destructive"
-            } ${daysLeft <= 7 ? "animate-pulse-soft" : ""}`}
+                  : "text-destructive",
+              daysLeft <= 7 && daysLeft > 0 && "animate-pulse-soft",
+            )}
           >
             {daysLeft > 0 ? daysLeft : 0}
           </div>
-          <div className="text-base text-muted-foreground mt-1">天</div>
-          {daysLeft <= 0 && (
+          <div className="text-base text-muted-foreground mt-1">
+            {daysLeft > 0 ? "天" : daysLeft === 0 ? "就是今天" : "天前"}
+          </div>
+          {daysLeft === 0 && (
             <p className="text-sm text-destructive mt-3 font-medium">
-              考试日已到，加油上岸！💪
+              重要的日子到了！💪
+            </p>
+          )}
+          {daysLeft < 0 && (
+            <p className="text-sm text-muted-foreground mt-3">
+              这个日子已过去 {-daysLeft} 天
             </p>
           )}
           <div className="text-xs text-muted-foreground mt-3">
@@ -166,14 +206,14 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
           </div>
         </section>
 
-        {/* 学习打卡 */}
+        {/* 每日打卡 */}
         <section className="rounded-2xl p-4 bg-card border border-border/50">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <Flame className="w-5 h-5 text-orange-500" />
-              <span className="font-semibold">已坚持学习</span>
+              <span className="font-semibold">已坚持</span>
               <span className="text-2xl font-bold tabular-nums text-primary">
-                {studyDays}
+                {checkinDays}
               </span>
               <span className="text-sm text-muted-foreground">天</span>
             </div>
@@ -218,7 +258,7 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
         <section className="rounded-2xl p-4 bg-card border border-border/50">
           <div className="flex items-center gap-2 mb-3">
             <Trophy className="w-5 h-5 text-amber-500" />
-            <span className="font-semibold">备考进度</span>
+            <span className="font-semibold">进度</span>
           </div>
           <div className="flex items-baseline justify-between mb-2">
             <span className="text-sm text-muted-foreground">
@@ -241,11 +281,11 @@ export function ExamCountdownModule({ onBack }: ExamCountdownModuleProps) {
           <div className="flex items-start gap-2">
             <CalendarIcon className="w-4 h-4 mt-0.5 text-secondary-foreground shrink-0" />
             <div className="text-sm text-secondary-foreground leading-relaxed">
-              <p className="font-medium mb-1">💡 备考小贴士</p>
+              <p className="font-medium mb-1">💡 小贴士</p>
               <ul className="space-y-1 text-xs">
-                <li>· 制定每日学习计划，量化目标</li>
-                <li>· 教育学、心理学是重点，结合真题理解</li>
-                <li>· 每周回顾错题本，避免重复犯错</li>
+                <li>· 设置清晰的目标，量化每日进度</li>
+                <li>· 坚持每日打卡，养成习惯</li>
+                <li>· 定期回顾，调整计划</li>
                 <li>· 保持规律作息，劳逸结合</li>
               </ul>
             </div>

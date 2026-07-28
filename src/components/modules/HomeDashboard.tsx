@@ -98,9 +98,9 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
   const cards: ModuleCard[] = [
     {
       key: "countdown",
-      title: "备考倒计时",
-      emoji: "📚",
-      desc: "距考试还有",
+      title: "倒数日",
+      emoji: data.examCountdown.icon || "🎯",
+      desc: data.examCountdown.examName,
       icon: CalendarClock,
       color: "bg-primary/15",
       onClick: () => onOpenModule("countdown"),
@@ -197,14 +197,16 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
       >
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">已坚持学习</p>
+            <p className="text-sm text-muted-foreground">已坚持</p>
             <p className="text-3xl font-bold text-primary tabular-nums mt-1">
               {summary.studyDays}
               <span className="text-base font-normal ml-1">天</span>
             </p>
           </div>
           <div className="text-right">
-            <p className="text-sm text-muted-foreground">距考试还有</p>
+            <p className="text-sm text-muted-foreground truncate max-w-[120px]">
+              距{data.examCountdown.examName}
+            </p>
             <p
               className={cn(
                 "text-3xl font-bold tabular-nums mt-1",
@@ -213,13 +215,13 @@ export function HomeDashboard({ onOpenModule }: HomeDashboardProps) {
                   : "text-destructive animate-pulse-soft",
               )}
             >
-              {summary.countdown}
+              {summary.countdown > 0 ? summary.countdown : 0}
               <span className="text-base font-normal ml-1">天</span>
             </p>
           </div>
         </div>
         <p className="text-xs text-muted-foreground mt-3 italic">
-          “每一道题、每一页书，都是通往讲台的台阶。”
+          “坚持的每一天，都在靠近想要的生活。”
         </p>
       </section>
 

@@ -3,14 +3,16 @@
  * 统一管理所有数据模块的类型
  */
 
-// ============ 备考倒计时 ============
+// ============ 倒数日（通用事件倒计时） ============
 export interface ExamCountdownState {
-  /** 目标考试日期 YYYY-MM-DD */
+  /** 目标日期 YYYY-MM-DD */
   targetDate: string;
-  /** 开始备考日期 YYYY-MM-DD，用于计算坚持天数 */
+  /** 开始日期 YYYY-MM-DD，用于计算坚持天数 */
   startDate: string;
-  /** 考试名称 */
+  /** 事件名称（用户自定义，如"教师编考试"、"生日"、"婚礼"等） */
   examName: string;
+  /** 事件类型图标 emoji，默认 🎯 */
+  icon?: string;
 }
 
 // ============ 刷题模块 ============

@@ -241,7 +241,7 @@ export function QuickCalendarModule({ onBack }: QuickCalendarModuleProps) {
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-destructive" />
-            <span>考试日</span>
+            <span>目标日</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-primary" />

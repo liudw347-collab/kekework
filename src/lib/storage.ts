@@ -23,10 +23,14 @@ const todayISO = () => {
 };
 
 export const DEFAULT_EXAM_COUNTDOWN: ExamCountdownState = {
-  examName: "河北教师编考试",
-  targetDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10),
+  examName: "我的目标",
+  icon: "🎯",
+  // 默认目标日期：当前日期 + 60 天（本地时区）
+  targetDate: (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 60);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  })(),
   startDate: todayISO(),
 };
 

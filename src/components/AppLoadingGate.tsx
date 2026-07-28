@@ -3,18 +3,25 @@
 import { Loader2, CloudOff, KeyRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/context/AppDataContext";
-import { TokenDialog } from "@/components/TokenDialog";
-import { useState } from "react";
 
 /**
  * 全局加载/错误状态
  * - loading: 显示加载动画
- * - needToken: 显示输入令牌提示条
+ * - needToken: 显示输入令牌提示条（点击按钮由父组件处理）
  * - error: 显示错误信息（但允许继续使用，数据会降级到默认值）
+ *
+ * 注意：TokenDialog 不在这里渲染，由 page.tsx 统一管理，
+ * 通过 onTokenDialogOpen 回调触发，避免重复挂载。
  */
-export function AppLoadingGate({ children }: { children: React.ReactNode }) {
+export function AppLoadingGate({
+  children,
+  onTokenDialogOpen,
+}: {
+  children: React.ReactNode;
+  onTokenDialogOpen?: () => void;
+}) {
+  // useAppData() 自身的状态变化会触发本组件重渲染
   const { loading, needToken, error } = useAppData();
-  const [tokenOpen, setTokenOpen] = useState(false);
 
   if (loading) {
     return (
@@ -36,14 +43,16 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
             <>
               <KeyRound className="w-3.5 h-3.5 shrink-0" />
               <span>请设置访问令牌以启用数据同步</span>
-              <Button
-                size="sm"
-                variant="outline"
-                className="h-6 ml-auto text-xs"
-                onClick={() => setTokenOpen(true)}
-              >
-                设置令牌
-              </Button>
+              {onTokenDialogOpen && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 ml-auto text-xs"
+                  onClick={onTokenDialogOpen}
+                >
+                  设置令牌
+                </Button>
+              )}
             </>
           ) : (
             <>
@@ -64,7 +73,6 @@ export function AppLoadingGate({ children }: { children: React.ReactNode }) {
         </div>
       )}
       {children}
-      <TokenDialog open={tokenOpen} onOpenChange={setTokenOpen} />
     </>
   );
 }
