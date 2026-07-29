@@ -293,6 +293,31 @@ export function ProfileModule({ onBack, onOpenModule }: ProfileModuleProps) {
           </div>
         </section>
 
+        {/* 安装到桌面 */}
+        <section className="rounded-2xl p-4 bg-card border border-border/50">
+          <h3 className="font-semibold text-sm flex items-center gap-2 mb-3">
+            📱 安装到桌面
+          </h3>
+          <div className="space-y-3 text-xs">
+            <div>
+              <p className="font-medium mb-1 text-foreground">安卓手机</p>
+              <p className="text-muted-foreground leading-relaxed">
+                用 Chrome 浏览器打开网站 → 右上角菜单 → 添加到主屏幕
+              </p>
+            </div>
+            <div className="border-t border-border/30 pt-3">
+              <p className="font-medium mb-1 text-foreground">苹果手机（iPhone）</p>
+              <p className="text-muted-foreground leading-relaxed">
+                用 Safari 浏览器打开网站（不要用微信或 Chrome）→
+                点底部「分享」按钮 → 选择「添加到主屏幕」
+              </p>
+              <p className="text-[10px] text-muted-foreground mt-2 italic">
+                💡 安装后像原生 App 一样使用，没有浏览器地址栏，全屏体验
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* 关于 */}
         <section className="rounded-2xl p-4 bg-secondary/40 border border-border/30">
           <div className="flex items-start gap-2">

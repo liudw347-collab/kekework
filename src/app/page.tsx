@@ -18,6 +18,7 @@ import { QuickCalendarModule } from "@/components/modules/QuickCalendarModule";
 import { QuickNavModule } from "@/components/modules/QuickNavModule";
 import { ProfileModule } from "@/components/modules/ProfileModule";
 import { TokenDialog } from "@/components/TokenDialog";
+import { IosPwaGuide } from "@/components/IosPwaGuide";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useAppData } from "@/context/AppDataContext";
@@ -157,6 +158,9 @@ export default function Home() {
         </main>
 
         <BottomNav tab={tab} onSwitch={switchTab} />
+
+        {/* iOS 添加到主屏幕引导 */}
+        <IosPwaGuide />
 
         {/* 全局对话框 - 由侧边菜单触发 */}
         <TokenDialog open={tokenDialogOpen} onOpenChange={setTokenDialogOpen} />
